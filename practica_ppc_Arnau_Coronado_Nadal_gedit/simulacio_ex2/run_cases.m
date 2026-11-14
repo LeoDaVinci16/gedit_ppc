@@ -1,6 +1,6 @@
 % Run this as a SCRIPT (not a function) so the variables live in the base workspace.
 mdl        = 'inversor';
-param_file = 'inversor_param.m';     % <-- name of your parameter file
+param_file = 'parametres.m';     % <-- name of your parameter file
 cases      = 1:6;                    % case_id values to run (slide 18 table)
 stop_time  = '40';                   % [s]
 outdir     = 'resultados';

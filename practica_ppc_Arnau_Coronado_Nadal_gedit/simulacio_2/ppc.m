@@ -23,10 +23,10 @@ function setup(block)
     block.OutputPort(i).SamplingMode = 'Sample';
   end
 
-  % Parametros: sample_time, Ppv_nom, Ki, Kp, Ramp_rate_lim, antiwindup
-  block.NumDialogPrms = 5;
+  % Parameters: sample_time, Ppv_nom, Ki, Kp, Ramp_rate_lim, ppc_init_value, antiwindup
+  block.NumDialogPrms = 7;
 
-  % Tiempo de muestreo discreto (parametro 1)
+  % Discrete sample time (parameter 1)
   block.SampleTimes = [block.DialogPrm(1).Data 0];
 
   block.SimStateCompliance = 'DefaultSimState';
@@ -37,7 +37,7 @@ function setup(block)
   block.RegBlockMethod('Outputs',              @Outputs);     % Required
   block.RegBlockMethod('Update',               @Update);
   block.RegBlockMethod('Derivatives',          @Derivatives);
-  block.RegBlockMethod('Terminate',            @Terminate); % Required
+  block.RegBlockMethod('Terminate',            @Terminate);   % Required
   %end setup
 
 function DoPostPropSetup(block)
@@ -52,22 +52,21 @@ function InitializeConditions(block)
   %end InitializeConditions
 
 function Start(block)
-  block.Dwork(1).Data = 0;
-  block.Dwork(1).Data = block.DialogPrm(5).Data;
+  block.Dwork(1).Data = block.DialogPrm(6).Data;   % ppc_init_value [kW]
   %end Start
 
 function Outputs(block)
   Ppcc_meas     = block.InputPort(1).Data;  % [kW]
   Ppcc_setpoint = block.InputPort(2).Data;  % [kW]
 
-  I       = block.Dwork(1).Data;            % integrador [kW]
+  I       = block.Dwork(1).Data;            % integrator [kW]
   Ppv_nom = block.DialogPrm(2).Data;
   Kp      = block.DialogPrm(4).Data;
 
   e         = Ppcc_setpoint - Ppcc_meas;
-  Piout  = I + Kp*e;                     % PI sin saturar [kW]
-  alpha = Piout/Ppv_nom;                     % alpha sin saturar
-  alpha_sat = max(0, min(1, alpha));         % alpha saturado
+  Piout     = I + Kp*e;                     % PI not saturated [kW]
+  alpha     = Piout/Ppv_nom;                % alpha not saturated
+  alpha_sat = max(0, min(1, alpha));        % alpha saturated
 
   block.OutputPort(1).Data = alpha_sat;
   block.OutputPort(2).Data = e;
@@ -77,17 +76,32 @@ function Outputs(block)
   %end Outputs
 
 function Update(block)
-  % Actualizacion del integrador en cada instante de muestreo
+  % Integrator update at every sample instant
   Ppcc_meas     = block.InputPort(1).Data;
   Ppcc_setpoint = block.InputPort(2).Data;
-  Ts = block.DialogPrm(1).Data;
-  Ki = block.DialogPrm(3).Data;
+  Ts          = block.DialogPrm(1).Data;
+  Ppv_nom     = block.DialogPrm(2).Data;
+  Ki          = block.DialogPrm(3).Data;
+  Kp          = block.DialogPrm(4).Data;
+  antiwindup  = block.DialogPrm(7).Data;    % 0 = plain PI, 1 = conditional integration
+
+  I = block.Dwork(1).Data;
   e = Ppcc_setpoint - Ppcc_meas;
-  block.Dwork(1).Data = block.Dwork(1).Data + Ki*Ts*e;
+
+  integrate = true;
+  if antiwindup ~= 0
+    Piout  = I + Kp*e;
+    sat_hi = (Piout > Ppv_nom) && (e > 0);  % saturated high and error pushes higher
+    sat_lo = (Piout < 0)       && (e < 0);  % saturated low and error pushes lower
+    integrate = ~(sat_hi || sat_lo);
+  end
+
+  if integrate
+    block.Dwork(1).Data = I + Ki*Ts*e;
+  end
   %end Update
 
 function Derivatives(block)
   %end Derivatives
 function Terminate(block)
   %end Terminate
-
