@@ -1,0 +1,7 @@
+caso,mode,Kp,Ki,Pavail_inv12_kW,Pavail_total_kW,TSO_before_kW,TSO_after_kW,P_before_kW,P_final_kW,P_min_after_kW,reaches_setpoint,overshoot,dip_below_setpoint_kW,settling_2pct_s,alpha_final
+2.1,1,0.5,0,2000,10000,7000,5000,7000,6333,6333,no,no,0,NaN,0.633
+2.2,1,5,0,2000,10000,7000,5000,7000,5333,4689,no,yes,311,NaN,0.533
+2.3,1,0.5,0.1,2000,10000,7000,5000,7000,5172,5172,no,no,0,NaN,0.517
+2.4,1,0.5,1,2000,10000,7000,5000,7000,5000,5000,yes,no,0,2.82,0.5
+2.5,1,0.5,10,2000,10000,7000,5000,7000,5000,3907,yes,yes,1093,2.64,0.5
+2.6,1,0.5,1,500,7000,7000,5000,7000,5000,5000,yes,no,0,4.83,0.667

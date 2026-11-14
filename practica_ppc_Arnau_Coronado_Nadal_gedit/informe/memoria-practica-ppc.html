@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Arnau Coronado Nadal">
+
+<title>Memoria de Práctica: Implementación y Simulación de un Controlador de Potencia Activa en una Planta Fotovoltaica (PPC)</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="memoria-practica-ppc_files/libs/clipboard/clipboard.min.js"></script>
+<script src="memoria-practica-ppc_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="memoria-practica-ppc_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="memoria-practica-ppc_files/libs/quarto-html/popper.min.js"></script>
+<script src="memoria-practica-ppc_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="memoria-practica-ppc_files/libs/quarto-html/anchor.min.js"></script>
+<link href="memoria-practica-ppc_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="memoria-practica-ppc_files/libs/quarto-html/quarto-syntax-highlighting-067f8ab80d092ae3595f7402c2c9b667.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="memoria-practica-ppc_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="memoria-practica-ppc_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="memoria-practica-ppc_files/libs/bootstrap/bootstrap-67270d1595a62d14f123c043d4fb2f18.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Tabla de contenidos</h2>
+   
+  <ul>
+  <li><a href="#introducción-y-objetivos" id="toc-introducción-y-objetivos" class="nav-link active" data-scroll-target="#introducción-y-objetivos"><span class="header-section-number">1</span> Introducción y Objetivos</a></li>
+  <li><a href="#marco-normativo-y-funcionalidades-del-power-plant-controller-ppc" id="toc-marco-normativo-y-funcionalidades-del-power-plant-controller-ppc" class="nav-link" data-scroll-target="#marco-normativo-y-funcionalidades-del-power-plant-controller-ppc"><span class="header-section-number">2</span> Marco Normativo y Funcionalidades del Power Plant Controller (PPC)</a>
+  <ul class="collapse">
+  <li><a href="#marco-normativo-y-códigos-de-red" id="toc-marco-normativo-y-códigos-de-red" class="nav-link" data-scroll-target="#marco-normativo-y-códigos-de-red"><span class="header-section-number">2.1</span> Marco Normativo y Códigos de Red</a></li>
+  <li><a href="#funciones-principales-del-ppc" id="toc-funciones-principales-del-ppc" class="nav-link" data-scroll-target="#funciones-principales-del-ppc"><span class="header-section-number">2.2</span> Funciones Principales del PPC</a></li>
+  </ul></li>
+  <li><a href="#descripción-del-modelo-de-la-planta-fotovoltaica" id="toc-descripción-del-modelo-de-la-planta-fotovoltaica" class="nav-link" data-scroll-target="#descripción-del-modelo-de-la-planta-fotovoltaica"><span class="header-section-number">3</span> Descripción del Modelo de la Planta Fotovoltaica</a>
+  <ul class="collapse">
+  <li><a href="#arquitectura-de-la-planta" id="toc-arquitectura-de-la-planta" class="nav-link" data-scroll-target="#arquitectura-de-la-planta"><span class="header-section-number">3.1</span> Arquitectura de la Planta</a></li>
+  <li><a href="#modelo-simplificado-del-inversor-fotovoltaico" id="toc-modelo-simplificado-del-inversor-fotovoltaico" class="nav-link" data-scroll-target="#modelo-simplificado-del-inversor-fotovoltaico"><span class="header-section-number">3.2</span> Modelo Simplificado del Inversor Fotovoltaico</a></li>
+  <li><a href="#retardos-de-comunicación" id="toc-retardos-de-comunicación" class="nav-link" data-scroll-target="#retardos-de-comunicación"><span class="header-section-number">3.3</span> Retardos de Comunicación</a></li>
+  </ul></li>
+  <li><a href="#descripción-de-las-simulaciones-realizadas-y-modelo-ppc" id="toc-descripción-de-las-simulaciones-realizadas-y-modelo-ppc" class="nav-link" data-scroll-target="#descripción-de-las-simulaciones-realizadas-y-modelo-ppc"><span class="header-section-number">4</span> Descripción de las Simulaciones Realizadas y Modelo PPC</a>
+  <ul class="collapse">
+  <li><a href="#algoritmo-del-ppc-en-m-s-function" id="toc-algoritmo-del-ppc-en-m-s-function" class="nav-link" data-scroll-target="#algoritmo-del-ppc-en-m-s-function"><span class="header-section-number">4.1</span> Algoritmo del PPC en M-S-Function</a></li>
+  <li><a href="#plan-de-ensayos-simulados" id="toc-plan-de-ensayos-simulados" class="nav-link" data-scroll-target="#plan-de-ensayos-simulados"><span class="header-section-number">4.2</span> Plan de Ensayos Simulados</a></li>
+  </ul></li>
+  <li><a href="#análisis-e-interpretación-de-resultados" id="toc-análisis-e-interpretación-de-resultados" class="nav-link" data-scroll-target="#análisis-e-interpretación-de-resultados"><span class="header-section-number">5</span> Análisis e Interpretación de Resultados</a>
+  <ul class="collapse">
+  <li><a href="#ejercicio-1-justificación-de-la-necesidad-del-controlador-central" id="toc-ejercicio-1-justificación-de-la-necesidad-del-controlador-central" class="nav-link" data-scroll-target="#ejercicio-1-justificación-de-la-necesidad-del-controlador-central"><span class="header-section-number">5.1</span> Ejercicio 1: Justificación de la Necesidad del Controlador Central</a></li>
+  <li><a href="#ejercicio-2-sintonización-y-dinámica-del-controlador-pi" id="toc-ejercicio-2-sintonización-y-dinámica-del-controlador-pi" class="nav-link" data-scroll-target="#ejercicio-2-sintonización-y-dinámica-del-controlador-pi"><span class="header-section-number">5.2</span> Ejercicio 2: Sintonización y Dinámica del Controlador PI</a></li>
+  <li><a href="#ejercicios-3-y-4-saturación-de-salida-y-fenómeno-de-windup" id="toc-ejercicios-3-y-4-saturación-de-salida-y-fenómeno-de-windup" class="nav-link" data-scroll-target="#ejercicios-3-y-4-saturación-de-salida-y-fenómeno-de-windup"><span class="header-section-number">5.3</span> Ejercicios 3 y 4: Saturación de Salida y Fenómeno de Windup</a></li>
+  <li><a href="#ejercicio-5-control-combinado-con-almacenamiento-bess" id="toc-ejercicio-5-control-combinado-con-almacenamiento-bess" class="nav-link" data-scroll-target="#ejercicio-5-control-combinado-con-almacenamiento-bess"><span class="header-section-number">5.4</span> Ejercicio 5: Control Combinado con Almacenamiento BESS</a></li>
+  </ul></li>
+  <li><a href="#conclusiones" id="toc-conclusiones" class="nav-link" data-scroll-target="#conclusiones"><span class="header-section-number">6</span> Conclusiones</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Otros formatos</h2><ul><li><a href="memoria-practica-ppc.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Memoria de Práctica: Implementación y Simulación de un Controlador de Potencia Activa en una Planta Fotovoltaica (PPC)</h1>
+<p class="subtitle lead">Gestión y Dirección de Tecnologías Energéticas Específicas (GeDIT)</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Autor/a</div>
+    <div class="quarto-title-meta-contents">
+             <p>Arnau Coronado Nadal </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Fecha de publicación</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">12 de noviembre de 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introducción-y-objetivos" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="introducción-y-objetivos"><span class="header-section-number">1</span> Introducción y Objetivos</h2>
+<p>La acelerada transición energética y la creciente penetración de la generación renovable distribuida en los sistemas eléctricos de potencia exige transformar las plantas fotovoltaicas en unidades activas, gestionables y capaces de brindar servicios de soporte a la red eléctrica. Las plantas fotovoltaicas modernas ya no operan de forma pasiva inyectando la máxima energía solar instantánea, sino que deben cumplir estrictos <strong>códigos de red</strong> (<em>Grid Codes</em>) establecidos por los operadores de los sistemas de transporte (TSO) y distribución (DSO).</p>
+<p>Para coordinar la operación simultánea de decenas o cientos de inversores fotovoltaicos distribuidos en el parque y garantizar el cumplimiento de las órdenes de control en el punto de interconexión (<em>Point of Common Coupling</em>, PCC), se requiere un elemento de control centralizado denominado <strong>Power Plant Controller (PPC)</strong>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Objetivos Principales de la Práctica
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><strong>Comprender la función del Power Plant Controller (PPC)</strong> como cerebro de control centralizado en instalaciones fotovoltaicas de gran escala.</li>
+<li><strong>Modelar una planta fotovoltaica simplificada en MATLAB/Simulink</strong>, representando la dinámica de respuesta de los inversores, las restricciones de disponibilidad por sombreado atmosférico y los retardos puros del sistema de comunicaciones.</li>
+<li><strong>Implementar el algoritmo de control de potencia activa mediante una M-S-Function en MATLAB</strong>, evaluando la sintonización de parámetros del controlador PI (<span class="math inline">\(K_p\)</span>, <span class="math inline">\(K_i\)</span>), la velocidad de respuesta y la gestión de fenómenos de saturación del integrador (<em>windup</em>).</li>
+<li><strong>Evaluar el control combinado con almacenamiento de energía (BESS)</strong> para la limitación estricta de rampas de potencia y la optimización del estado de carga (<em>State of Charge</em>, <span class="math inline">\(SOC\)</span>).</li>
+</ul>
+</div>
+</div>
+<hr>
+</section>
+<section id="marco-normativo-y-funcionalidades-del-power-plant-controller-ppc" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="marco-normativo-y-funcionalidades-del-power-plant-controller-ppc"><span class="header-section-number">2</span> Marco Normativo y Funcionalidades del Power Plant Controller (PPC)</h2>
+<section id="marco-normativo-y-códigos-de-red" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="marco-normativo-y-códigos-de-red"><span class="header-section-number">2.1</span> Marco Normativo y Códigos de Red</h3>
+<p>Los códigos de red recogen las especificaciones técnicas y los límites operativos obligatorios para mantener la integridad, estabilidad y calidad de suministro de la red eléctrica. En Europa, la norma <em>Requirements for Generators</em> (RfG) desarrollada por <strong>ENTSO-E</strong> (Reglamento UE 2016/631) categoriza los módulos de parque de potencia (<em>Power Park Modules</em>, PPM) e impone requisitos de observabilidad y controlabilidad a partir de <span class="math inline">\(800\text{ W}\)</span> de potencia nominal.</p>
+<p>El incumplimiento de los márgenes reglamentarios en las variables eléctricas desencadena severos problemas operativos:</p>
+<ul>
+<li><strong>Desviaciones de Frecuencia (Variable Global):</strong> Directamente ligadas al equilibrio entre la potencia activa generada y la demanda. Sobrepasar los límites provoca variaciones indeseadas en la velocidad de motores síncronos industriales, descalibración de filtros pasivos de armónicos, alteración en bancos de condensadores y saturación del núcleo magnético en transformadores e inductancias, incrementando las pérdidas por corrientes de Foucault y distorsionando la onda.</li>
+<li><strong>Desviaciones de Tensión (Variable Local):</strong> Relacionadas con los flujos de potencia reactiva en las redes de transporte y distribución. Las sobretensiones elevan el riesgo de perforación en los aislamientos de los equipos y saturan máquinas eléctricas, mientras que las subtensiones incrementan la corriente y las pérdidas por efecto Joule, limitando la capacidad de evacuación de los generadores y acortando la vida útil de las cargas electrónicas.</li>
+</ul>
+</section>
+<section id="funciones-principales-del-ppc" class="level3" data-number="2.2">
+<h3 data-number="2.2" class="anchored" data-anchor-id="funciones-principales-del-ppc"><span class="header-section-number">2.2</span> Funciones Principales del PPC</h3>
+<p>El PPC centraliza las lecturas en tiempo real del equipo de medida en el PCC (<span class="math inline">\(P\)</span>, <span class="math inline">\(Q\)</span>, <span class="math inline">\(V\)</span>, <span class="math inline">\(f\)</span>) y procesa las consignas externas recibidas del TSO/DSO a través de la infraestructura SCADA/SmartBridge. Ejecuta sus algoritmos en ciclos periódicos con tiempos de respuesta que oscilan desde <span class="math inline">\(100\text{ ms}\)</span> hasta algunos segundos.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Importante</span>Funciones Reguladas Clave del PPC
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ol type="1">
+<li><strong>Limitación de Potencia Activa (<em>Active Power Curtailment</em>):</strong> Ajuste del techo máximo de potencia inyectable (<span class="math inline">\(P_{TSO}\)</span>) para gestionar congestiones en las líneas de evacuación o evitar sobrecargas en la red.</li>
+<li><strong>Control de Rampa (<em>Ramp Rate Limitation</em>):</strong> Limitación de las pendientes máximas de variación de potencia (<span class="math inline">\(\Delta P / \Delta t\)</span>) ante fluctuaciones bruscas de radiación por paso de nubes, protegiendo la estabilidad del sistema.</li>
+<li><strong>Regulación de Frecuencia (<em>f-P Droop Control</em>):</strong> Modulación de la potencia activa en respuesta a desviaciones de frecuencia mediante características estáticas de caída (<em>droop</em> de 2% a 10%), participando en la regulación primaria.</li>
+<li><strong>Control de Potencia Reactiva, Factor de Potencia y Tensión (<span class="math inline">\(V-Q\)</span>):</strong> Control independiente de la componente de corriente en cuadratura (<span class="math inline">\(I_q\)</span>) para mantener el factor de potencia solicitado o regular la tensión en el PCC mediante curvas <em>droop</em> con ciclo de histéresis y filtros de primer orden (<span class="math inline">\(\tau = 150\text{ ms}\)</span>), coordinando los inversores con bancos de condensadores y equipos STATCOM.</li>
+<li><strong>Soporte ante Faltas (<em>Fault Ride-Through - LVRT/HVRT</em>):</strong> Inyección ultra-rápida de corriente reactiva (<span class="math inline">\(\Delta I_q / I_N \ge 2.0\text{ p.u.}\)</span>) en tiempos inferiores a <span class="math inline">\(20\text{ ms}\)</span> durante huecos de tensión, garantizando la no desconexión de la planta.</li>
+</ol>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="descripción-del-modelo-de-la-planta-fotovoltaica" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="descripción-del-modelo-de-la-planta-fotovoltaica"><span class="header-section-number">3</span> Descripción del Modelo de la Planta Fotovoltaica</h2>
+<p>Para analizar la dinámica de control del PPC en régimen de transitorios “lentos”, se utiliza un modelo representativo simplificado en MATLAB/Simulink que prescinde de las dinámicas de conmutación electromagnética rápida (<span class="math inline">\(&lt;20\text{ ms}\)</span>).</p>
+<section id="arquitectura-de-la-planta" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="arquitectura-de-la-planta"><span class="header-section-number">3.1</span> Arquitectura de la Planta</h3>
+<p>Las características técnicas de la instalación simulada son:</p>
+<ul>
+<li><strong>Potencia nominal total de la planta (<span class="math inline">\(P_{plant}\)</span>):</strong> <span class="math inline">\(10\text{ MW}\)</span> (<span class="math inline">\(10000\text{ kW}\)</span>).</li>
+<li><strong>Agrupación de generación:</strong> 5 inversores fotovoltaicos idénticos conectados en paralelo, cada uno con una potencia nominal de <span class="math inline">\(P_{nom,i} = 2\text{ MW}\)</span> (<span class="math inline">\(2000\text{ kW}\)</span>).</li>
+<li><strong>Punto de Interconexión (PCC):</strong> Punto común donde se suman todas las corrientes/potencias de los inversores para su evacuación a la red eléctrica.</li>
+</ul>
+</section>
+<section id="modelo-simplificado-del-inversor-fotovoltaico" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="modelo-simplificado-del-inversor-fotovoltaico"><span class="header-section-number">3.2</span> Modelo Simplificado del Inversor Fotovoltaico</h3>
+<p>El conjunto formado por el campo fotovoltaico y su correspondiente inversor se modela como un sistema de primer orden con un bloque de saturación a la salida que representa el límite físico por irradiancia y temperatura (<span class="math inline">\(P_{pv-av}\)</span>):</p>
+<p><span class="math display">\[P_{pv,i}(s) = \frac{1}{\tau_{pv}s + 1} \cdot P_{pv-set,i}^*(s)\]</span></p>
+<p>Donde:</p>
+<ul>
+<li><span class="math inline">\(\alpha \in [0, 1]\)</span> es la consigna adimensional en por unidad (p.u.) emitida por el PPC.</li>
+<li><span class="math inline">\(P_{pv-set,i}^* = \alpha \cdot P_{nom,i}\)</span> es la consigna de potencia activa en <span class="math inline">\(\text{kW}\)</span> para el inversor <span class="math inline">\(i\)</span>.</li>
+<li><span class="math inline">\(\tau_{pv} = 0.5\text{ s}\)</span> (<span class="math inline">\(500\text{ ms}\)</span>) representa la constante de tiempo equivalente de la respuesta del bucle interno del inversor.</li>
+<li><span class="math inline">\(P_{pv-av}\)</span> es la potencia máxima disponible en el lado DC bajo las condiciones solares instantáneas.</li>
+</ul>
+</section>
+<section id="retardos-de-comunicación" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="retardos-de-comunicación"><span class="header-section-number">3.3</span> Retardos de Comunicación</h3>
+<p>La transmisión de datos entre la instrumentación del PCC, el PPC central y las unidades de control local de los inversores introduce retardos de red. En Simulink, se representan mediante bloques de <strong>retardo puro</strong> (<em>Comm delay</em>) fijados en <span class="math inline">\(20\text{ ms}\)</span> (<span class="math inline">\(0.02\text{ s}\)</span>) tanto en el canal de realimentación de medida como en el canal de consigna.</p>
+<hr>
+</section>
+</section>
+<section id="descripción-de-las-simulaciones-realizadas-y-modelo-ppc" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="descripción-de-las-simulaciones-realizadas-y-modelo-ppc"><span class="header-section-number">4</span> Descripción de las Simulaciones Realizadas y Modelo PPC</h2>
+<section id="algoritmo-del-ppc-en-m-s-function" class="level3" data-number="4.1">
+<h3 data-number="4.1" class="anchored" data-anchor-id="algoritmo-del-ppc-en-m-s-function"><span class="header-section-number">4.1</span> Algoritmo del PPC en M-S-Function</h3>
+<p>El controlador central se programa mediante una <strong>M-S-Function de MATLAB</strong> con un periodo de muestreo discreto de <span class="math inline">\(T_{sample} = 200\text{ ms}\)</span> (<span class="math inline">\(0.2\text{ s}\)</span>).</p>
+<p>El algoritmo lee en cada periodo el error de potencia activa en el PCC:</p>
+<p><span class="math display">\[e(k) = P_{pcc\_setpoint}(k) - P_{pcc\_meas}(k)\]</span></p>
+<p>Y calcula la nueva consigna global <span class="math inline">\(\alpha(k)\)</span> mediante la ecuación en diferencias de un regulador PI:</p>
+<p><span class="math display">\[P_{tot}(k) = P_{tot}(k-1) + K_p \cdot [e(k) - e(k-1)] + K_i \cdot T_{sample} \cdot e(k)\]</span></p>
+<p><span class="math display">\[\alpha(k) = \frac{P_{tot}(k)}{P_{plant}}\]</span></p>
+<p>Esta única señal <span class="math inline">\(\alpha(k)\)</span> se transmite a todos los inversores para que cada uno calcule su referencia local <span class="math inline">\(P_{ref,i} = \alpha \cdot P_{nom,i}\)</span>.</p>
+</section>
+<section id="plan-de-ensayos-simulados" class="level3" data-number="4.2">
+<h3 data-number="4.2" class="anchored" data-anchor-id="plan-de-ensayos-simulados"><span class="header-section-number">4.2</span> Plan de Ensayos Simulados</h3>
+<ol type="1">
+<li><strong>Ejercicio 1 (Sombreado sin PPC Central):</strong> Transmisión directa de la consigna TSO en bucle abierto (<span class="math inline">\(\alpha = P_{TSO}/P_{plant}\)</span>) comparando condiciones sin nubes vs sombreado parcial (<span class="math inline">\(P_{pv-av,1,2} = 1500\text{ kW}\)</span>) y sombreado severo (<span class="math inline">\(P_{pv-av,1,2} = 500\text{ kW}\)</span>) en los inversores 1 y 2.</li>
+<li><strong>Ejercicio 2 (Sintonización del PI):</strong> Evaluación de combinaciones de <span class="math inline">\(K_p \in \{0.5, 5.0\}\)</span> y <span class="math inline">\(K_i \in \{0, 0.1, 1.0, 10.0\}\)</span> ante un escalón de consigna de <span class="math inline">\(7000\text{ kW}\)</span> a <span class="math inline">\(5000\text{ kW}\)</span> a los <span class="math inline">\(t = 10\text{ s}\)</span>.</li>
+<li><strong>Ejercicio 3 (Saturación y Windup):</strong> Análisis del comportamiento del integrador cuando la consigna TSO (<span class="math inline">\(10\text{ MW}\)</span>) excede la capacidad física real de la planta (<span class="math inline">\(7\text{ MW}\)</span>) por estar los inversores 1 y 2 limitados a <span class="math inline">\(500\text{ kW}\)</span>.</li>
+<li><strong>Ejercicio 4 (Sombreado Global Temporal):</strong> Simulación de un paso de nube sobre toda la planta (<span class="math inline">\(P_{pv-av,i} = 500\text{ kW}\)</span> en los 5 inversores, <span class="math inline">\(P_{plant,av} = 2.5\text{ MW}\)</span>) entre <span class="math inline">\(t = 30\text{ s}\)</span> y <span class="math inline">\(t = 40\text{ s}\)</span>.</li>
+<li><strong>Ejercicio 5 (Integración BESS y Control de Rampas):</strong> Coordinación del parque fotovoltaico con almacenamiento en batería para limitar las pendientes a un máximo de <span class="math inline">\(10\% P_{nom}/\text{min}\)</span> (<span class="math inline">\(1\text{ MW}/\text{min}\)</span>), analizando las estrategias de <span class="math inline">\(SOC\)</span> constante (<span class="math inline">\(1.0\text{ p.u.}\)</span>, <span class="math inline">\(0.5\text{ p.u.}\)</span>) frente a <span class="math inline">\(SOC^*\)</span> dinámico:</li>
+</ol>
+<p><span class="math display">\[SOC^*(t) = 0.4 + \frac{0.6-0.4}{P_{plant}} \cdot P_{pv-meas}(t)\]</span></p>
+<hr>
+</section>
+</section>
+<section id="análisis-e-interpretación-de-resultados" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="análisis-e-interpretación-de-resultados"><span class="header-section-number">5</span> Análisis e Interpretación de Resultados</h2>
+<section id="ejercicio-1-justificación-de-la-necesidad-del-controlador-central" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="ejercicio-1-justificación-de-la-necesidad-del-controlador-central"><span class="header-section-number">5.1</span> Ejercicio 1: Justificación de la Necesidad del Controlador Central</h3>
+<p>El envío de la consigna en bucle abierto asume que todos los inversores operan al <span class="math inline">\(100\%\)</span> de su capacidad nominal. Los resultados de simulación demuestran el fallo de esta hipótesis ante sombreados locales:</p>
+<div id="tbl-ejercicio1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ejercicio1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabla&nbsp;1: Resultados del Ejercicio 1 en Bucle Abierto
+</figcaption>
+<div aria-describedby="tbl-ejercicio1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Escenario de Sombreado</th>
+<th style="text-align: left;">Consigna TSO (<span class="math inline">\(P_{TSO}\)</span>)</th>
+<th style="text-align: left;"><span class="math inline">\(P_{pv-av}\)</span> Inv 1 y 2</th>
+<th style="text-align: left;">Potencia Entregada PCC</th>
+<th style="text-align: left;">Error Permanente en PCC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Condición Nominal (Sin Nubes)</strong></td>
+<td style="text-align: left;"><span class="math inline">\(10000\text{ kW}\)</span> (<span class="math inline">\(\alpha=1.0\)</span>)</td>
+<td style="text-align: left;"><span class="math inline">\(2000\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(10000\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0\text{ kW}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Sombreado Parcial</strong></td>
+<td style="text-align: left;"><span class="math inline">\(10000\text{ kW}\)</span> (<span class="math inline">\(\alpha=1.0\)</span>)</td>
+<td style="text-align: left;"><span class="math inline">\(1500\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(9000\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(-1000\text{ kW}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Sombreado Severo</strong></td>
+<td style="text-align: left;"><span class="math inline">\(10000\text{ kW}\)</span> (<span class="math inline">\(\alpha=1.0\)</span>)</td>
+<td style="text-align: left;"><span class="math inline">\(500\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(7000\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(-3000\text{ kW}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Sombreado Severo en Curtailment</strong></td>
+<td style="text-align: left;"><span class="math inline">\(5000\text{ kW}\)</span> (<span class="math inline">\(\alpha=0.5\)</span>)</td>
+<td style="text-align: left;"><span class="math inline">\(500\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(4000\text{ kW}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(-1000\text{ kW}\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Análisis Técnico:</strong> Los inversores 1 y 2 saturan su producción a su límite térmico/solar instantáneo (<span class="math inline">\(1500\text{ kW}\)</span> o <span class="math inline">\(500\text{ kW}\)</span>). Los inversores 3, 4 y 5, al recibir únicamente el valor <span class="math inline">\(\alpha\)</span> fijado por la consigna global, no incrementan su generación para compensar el déficit. <strong>Se demuestra que el control en bucle abierto no garantiza el cumplimiento de los compromisos con el TSO</strong>, haciendo imprescindible un PPC con realimentación del error en el PCC.</p>
+</section>
+<section id="ejercicio-2-sintonización-y-dinámica-del-controlador-pi" class="level3" data-number="5.2">
+<h3 data-number="5.2" class="anchored" data-anchor-id="ejercicio-2-sintonización-y-dinámica-del-controlador-pi"><span class="header-section-number">5.2</span> Ejercicio 2: Sintonización y Dinámica del Controlador PI</h3>
+<p>Al activar la realimentación en el PPC, la S-Function recalcula <span class="math inline">\(\alpha\)</span> dinámicamente. La siguiente tabla resume la respuesta del sistema tras el escalón de <span class="math inline">\(7000\text{ kW}\)</span> a <span class="math inline">\(5000\text{ kW}\)</span> a los <span class="math inline">\(t = 10\text{ s}\)</span>:</p>
+<div id="tbl-ejercicio2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ejercicio2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabla&nbsp;2: Sintonización de Parámetros del Controlador PI del PPC
+</figcaption>
+<div aria-describedby="tbl-ejercicio2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Consigna <span class="math inline">\(P_{TSO}\)</span> [kW]</th>
+<th style="text-align: left;"><span class="math inline">\(P_{pv-av,1,2}\)</span> [kW]</th>
+<th style="text-align: left;"><span class="math inline">\(K_p\)</span></th>
+<th style="text-align: left;"><span class="math inline">\(K_i\)</span></th>
+<th style="text-align: left;">¿Alcanza Consigna?</th>
+<th style="text-align: left;">Comportamiento Dinámico y Sobrepico</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(7000 \to 5000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(2000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0.5\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0\)</span></td>
+<td style="text-align: left;"><strong>No</strong> (<span class="math inline">\(P_{pcc} \approx 5200\text{ kW}\)</span>)</td>
+<td style="text-align: left;">Sin sobrepico, pero con error permanente por falta de acción integral.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(7000 \to 5000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(2000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(5.0\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0\)</span></td>
+<td style="text-align: left;"><strong>Casi</strong> (<span class="math inline">\(P_{pcc} \approx 5020\text{ kW}\)</span>)</td>
+<td style="text-align: left;">Reduce el error de régimen permanente, pero introduce oscilaciones transitorias.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(7000 \to 5000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(2000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0.5\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0.1\)</span></td>
+<td style="text-align: left;"><strong>Sí</strong></td>
+<td style="text-align: left;">Respuesta extremadamente lenta (<span class="math inline">\(t_{asentamiento} \approx 15\text{ s}\)</span>), sobreamortiguada.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(7000 \to 5000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(2000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0.5\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(1.0\)</span></td>
+<td style="text-align: left;"><strong>Sí</strong></td>
+<td style="text-align: left;"><strong>Ajuste Óptimo:</strong> Tiempo de asentamiento rápido (<span class="math inline">\(\sim 3\text{ s}\)</span>) y nulo sobrepico.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(7000 \to 5000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(2000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0.5\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(10.0\)</span></td>
+<td style="text-align: left;"><strong>Sí</strong></td>
+<td style="text-align: left;"><strong>Respuesta Inestable:</strong> Severas oscilaciones y sobrepico amplio por interacción con retardos.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(7000 \to 5000\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(500\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(0.5\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(1.0\)</span></td>
+<td style="text-align: left;"><strong>Sí</strong></td>
+<td style="text-align: left;">Eleva <span class="math inline">\(\alpha\)</span> automáticamente para que los Inv 3-5 compensen la falta de Inv 1-2.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Análisis Técnico:</strong> El valor <span class="math inline">\(K_p = 0.5\)</span> y <span class="math inline">\(K_i = 1.0\)</span> resulta ser la combinación óptima. Compensar el déficit de los inversores sombreados exige que el PPC eleve <span class="math inline">\(\alpha\)</span> por encima de <span class="math inline">\(0.5\)</span>, repartiendo el esfuerzo de inyección entre las unidades disponibles.</p>
+</section>
+<section id="ejercicios-3-y-4-saturación-de-salida-y-fenómeno-de-windup" class="level3" data-number="5.3">
+<h3 data-number="5.3" class="anchored" data-anchor-id="ejercicios-3-y-4-saturación-de-salida-y-fenómeno-de-windup"><span class="header-section-number">5.3</span> Ejercicios 3 y 4: Saturación de Salida y Fenómeno de Windup</h3>
+<p>Cuando el TSO solicita <span class="math inline">\(10\text{ MW}\)</span> pero la planta físicamente solo puede suministrar <span class="math inline">\(7\text{ MW}\)</span> (<span class="math inline">\(P_{pv-av,1,2} = 500\text{ kW}\)</span>), se establece un error constante <span class="math inline">\(e(k) = 10000 - 7000 = 3000\text{ kW}\)</span>.</p>
+<ul>
+<li><strong>Mecanismo del Windup:</strong> El término integral acumula continuamente este error no nulo, haciendo crecer el estado interno del integrador a valores muy superiores al <span class="math inline">\(100\%\)</span> de la capacidad de la planta.</li>
+<li><strong>Impacto en el Transitorio:</strong> Al caer la consigna a <span class="math inline">\(5\text{ MW}\)</span> a los <span class="math inline">\(t = 20\text{ s}\)</span>, la potencia medida en el PCC <strong>permanece congelada en <span class="math inline">\(7\text{ MW}\)</span> durante varios segundos</strong>. El controlador no reacciona hasta que la acción integral logra “evacuar” el exceso de error acumulado y la señal <span class="math inline">\(\alpha\)</span> retorna al rango operable (<span class="math inline">\(&lt;1.0\)</span>).</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode matlab code-with-copy"><code class="sourceCode matlab"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">% Lógica de Clamping Anti-Windup implementada en la M-S-Function del PPC</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> [<span class="va">sys</span><span class="op">,</span> <span class="va">x0</span><span class="op">,</span> <span class="va">str</span><span class="op">,</span> <span class="va">ts</span>] <span class="op">=</span> <span class="va">m_ppc_controller</span>(<span class="va">t</span><span class="op">,</span> <span class="va">x</span><span class="op">,</span> <span class="va">u</span><span class="op">,</span> <span class="va">flag</span><span class="op">,</span> <span class="va">Kp</span><span class="op">,</span> <span class="va">Ki</span><span class="op">,</span> <span class="va">Ts</span><span class="op">,</span> <span class="va">Pplant</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">% u(1): P_pcc_setpoint [kW]</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">% u(2): P_pcc_meas [kW]</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">persistent</span> <span class="va">I_term_prev</span> <span class="va">alpha_prev</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="va">isempty</span>(<span class="va">I_term_prev</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">I_term_prev</span> <span class="op">=</span> <span class="fl">0</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">alpha_prev</span> <span class="op">=</span> <span class="fl">0</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="va">P_set</span> <span class="op">=</span> <span class="va">u</span>(<span class="fl">1</span>)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="va">P_meas</span> <span class="op">=</span> <span class="va">u</span>(<span class="fl">2</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="va">error</span> <span class="op">=</span> <span class="va">P_set</span> <span class="op">-</span> <span class="va">P_meas</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">% Cálculo provisional de salida no saturada</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="va">P_tot_unstat</span> <span class="op">=</span> <span class="va">Kp</span> <span class="op">*</span> <span class="va">error</span> <span class="op">+</span> (<span class="va">I_term_prev</span> <span class="op">+</span> <span class="va">Ki</span> <span class="op">*</span> <span class="va">Ts</span> <span class="op">*</span> <span class="va">error</span>)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="va">alpha_unstat</span> <span class="op">=</span> <span class="va">P_tot_unstat</span> <span class="op">/</span> <span class="va">Pplant</span><span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">% Anti-Windup Clamping Logic</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> (<span class="va">alpha_unstat</span> <span class="op">&gt;</span> <span class="fl">1.0</span> <span class="op">&amp;&amp;</span> <span class="va">error</span> <span class="op">&gt;</span> <span class="fl">0</span>) <span class="op">||</span> (<span class="va">alpha_unstat</span> <span class="op">&lt;</span> <span class="fl">0.0</span> <span class="op">&amp;&amp;</span> <span class="va">error</span> <span class="op">&lt;</span> <span class="fl">0</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">% Congelar integrador si la salida está saturada y el error mantendría la saturación</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">I_term</span> <span class="op">=</span> <span class="va">I_term_prev</span><span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">else</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">I_term</span> <span class="op">=</span> <span class="va">I_term_prev</span> <span class="op">+</span> <span class="va">Ki</span> <span class="op">*</span> <span class="va">Ts</span> <span class="op">*</span> <span class="va">error</span><span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="va">P_tot</span> <span class="op">=</span> <span class="va">Kp</span> <span class="op">*</span> <span class="va">error</span> <span class="op">+</span> <span class="va">I_term</span><span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="va">alpha</span> <span class="op">=</span> <span class="va">max</span>(<span class="fl">0.0</span><span class="op">,</span> <span class="va">min</span>(<span class="fl">1.0</span><span class="op">,</span> <span class="va">P_tot</span> <span class="op">/</span> <span class="va">Pplant</span>))<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="va">I_term_prev</span> <span class="op">=</span> <span class="va">I_term</span><span class="op">;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="va">alpha_prev</span> <span class="op">=</span> <span class="va">alpha</span><span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="va">sys</span> <span class="op">=</span> [<span class="va">alpha</span>]<span class="op">;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Al aplicar el Anti-Windup en el Ejercicio 4 (paso de nube global de <span class="math inline">\(t=30\text{ s}\)</span> a <span class="math inline">\(t=40\text{ s}\)</span>), se elimina el sobrepico de potencia al despejarse la nube, retornando la inyección al valor consignado de <span class="math inline">\(5\text{ MW}\)</span> de forma completamente suave.</p>
+</section>
+<section id="ejercicio-5-control-combinado-con-almacenamiento-bess" class="level3" data-number="5.4">
+<h3 data-number="5.4" class="anchored" data-anchor-id="ejercicio-5-control-combinado-con-almacenamiento-bess"><span class="header-section-number">5.4</span> Ejercicio 5: Control Combinado con Almacenamiento BESS</h3>
+<p>El almacenamiento en baterías aporta el soporte de potencia activa necesario para dar cumplimiento a las restricciones de rampa máxima (<span class="math inline">\(10\% P_{nom}/\text{min} = 1\text{ MW}/\text{min}\)</span>):</p>
+<ul>
+<li><strong>Control Directo de Rampa vs Filtrado Paso Bajo:</strong> El control directo activa la batería exclusivamente cuando la derivada de potencia sobrepasa el límite (<span class="math inline">\(\Delta P / \Delta t &gt; \Delta P_{max}\)</span>), reduciendo drásticamente los ciclos de carga/descarga e incrementando la vida útil del BESS frente al filtrado continuo.</li>
+<li><strong>Estrategias de Estado de Carga (<span class="math inline">\(SOC\)</span>):</strong> Operar con un <span class="math inline">\(SOC^*\)</span> dinámico proporcional a la generación actual permite mantener la batería cargada ante posibles rampas de bajada bruscas y con margen suficiente para absorber rampas de subida, logrando el equilibrio óptimo entre dimensionado del BESS y aprovechamiento de la energía solar.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="conclusiones" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="conclusiones"><span class="header-section-number">6</span> Conclusiones</h2>
+<ol type="1">
+<li><strong>Imprescindibilidad del PPC Centralizado:</strong> Las simulaciones corroboran que el control local en bucle abierto es incapaz de responder ante perturbaciones de irradiancia o sombreado parcial. El regulador PI centralizado garantiza el cumplimiento de la consigna del TSO redistribuyendo el esfuerzo de generación.</li>
+<li><strong>Sintonización Robusta (<span class="math inline">\(K_p = 0.5, K_i = 1.0\)</span>):</strong> Esta combinación ofrece un excelente compromiso entre rapidez de asentamiento (<span class="math inline">\(\approx 3\text{ s}\)</span>) y estabilidad frente a retardos de comunicación (<span class="math inline">\(20\text{ ms}\)</span>).</li>
+<li><strong>Efectividad del Anti-Windup:</strong> La integración de un mecanismo de <em>Clamping</em> evita acumulaciones excesivas en la acción integral durante episodios de saturación física, garantizando una recuperación inmediata cuando las condiciones atmosféricas o de red se normalizan.</li>
+<li><strong>Sinergia Fotovoltaica + BESS:</strong> El sistema de almacenamiento compensa las limitaciones dinámicas del campo solar, absorbiendo y devolviendo potencia durante rampas bruscas y garantizando la conformidad técnica con los códigos de red más exigentes.</li>
+</ol>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiado");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiado");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

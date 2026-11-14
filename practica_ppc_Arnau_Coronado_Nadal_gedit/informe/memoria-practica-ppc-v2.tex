@@ -1,0 +1,648 @@
+% Options for packages loaded elsewhere
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  catalan,
+  letterpaper,
+  DIV=11,
+  numbers=noendperiod]{scrartcl}
+\usepackage{xcolor}
+\usepackage[top=25mm,bottom=25mm,left=20mm,right=20mm]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{5}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+% Make \paragraph and \subparagraph free-standing
+\makeatletter
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}{
+    \@ifstar
+      \xxxParagraphStar
+      \xxxParagraphNoStar
+  }
+  \newcommand{\xxxParagraphStar}[1]{\oldparagraph*{#1}\mbox{}}
+  \newcommand{\xxxParagraphNoStar}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}{
+    \@ifstar
+      \xxxSubParagraphStar
+      \xxxSubParagraphNoStar
+  }
+  \newcommand{\xxxSubParagraphStar}[1]{\oldsubparagraph*{#1}\mbox{}}
+  \newcommand{\xxxSubParagraphNoStar}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+\makeatother
+
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{241,243,245}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.40,0.45,0.13}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\ExtensionTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.28,0.35,0.67}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.46,0.62}{#1}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.07,0.07,0.07}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+
+
+
+\ifLuaTeX
+\usepackage[bidi=basic,shorthands=off]{babel}
+\else
+\usepackage[bidi=default,shorthands=off]{babel}
+\fi
+\ifLuaTeX
+  \usepackage{selnolig} % disable illegal ligatures
+\fi
+
+
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+
+
+ 
+
+
+\KOMAoption{captions}{tableheading}
+\makeatletter
+\@ifpackageloaded{tcolorbox}{}{\usepackage[skins,breakable]{tcolorbox}}
+\@ifpackageloaded{fontawesome5}{}{\usepackage{fontawesome5}}
+\definecolor{quarto-callout-color}{HTML}{909090}
+\definecolor{quarto-callout-note-color}{HTML}{0758E5}
+\definecolor{quarto-callout-important-color}{HTML}{CC1914}
+\definecolor{quarto-callout-warning-color}{HTML}{EB9113}
+\definecolor{quarto-callout-tip-color}{HTML}{00A047}
+\definecolor{quarto-callout-caution-color}{HTML}{FC5300}
+\definecolor{quarto-callout-color-frame}{HTML}{acacac}
+\definecolor{quarto-callout-note-color-frame}{HTML}{4582ec}
+\definecolor{quarto-callout-important-color-frame}{HTML}{d9534f}
+\definecolor{quarto-callout-warning-color-frame}{HTML}{f0ad4e}
+\definecolor{quarto-callout-tip-color-frame}{HTML}{02b875}
+\definecolor{quarto-callout-caution-color-frame}{HTML}{fd7e14}
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Taula de continguts}
+\else
+  \newcommand\contentsname{Taula de continguts}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{Llista de figures}
+\else
+  \newcommand\listfigurename{Llista de figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{Llista de taules}
+\else
+  \newcommand\listtablename{Llista de taules}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figura}
+\else
+  \newcommand\figurename{Figura}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Taula}
+\else
+  \newcommand\tablename{Taula}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Llistat}
+\newcommand*\listoflistings{\listof{codelisting}{Llista de llistats}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Memòria de la Pràctica PPC: Implementació i Simulació d'un Controlador de Potència Activa en una Planta Fotovoltaica},
+  pdfauthor={Arnau Coronado Nadal},
+  pdflang={ca},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+
+\title{Memòria de la Pràctica PPC: Implementació i Simulació d'un
+Controlador de Potència Activa en una Planta Fotovoltaica}
+\usepackage{etoolbox}
+\makeatletter
+\providecommand{\subtitle}[1]{% add subtitle to \maketitle
+  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
+}
+\makeatother
+\subtitle{Assignatura: GeDIT --- Control de Planta Fotovoltaica}
+\author{Arnau Coronado Nadal}
+\date{2026-11-12}
+\begin{document}
+\maketitle
+
+\renewcommand*\contentsname{Taula de continguts}
+{
+\setcounter{tocdepth}{3}
+\tableofcontents
+}
+
+\section{Introducció i Objectius}\label{introducciuxf3-i-objectius}
+
+La ràpida transició energètica i la creixent penetració de la generació
+renovable distribuïda en els sistemes elèctrics de potència exigeixen
+transformar les plantes fotovoltaiques en unitats actives, gestionables
+i capaces de proporcionar serveis de suport a la xarxa elèctrica. Les
+plantes fotovoltaiques modernes ja no poden operar de manera passiva
+injectant la màxima energia solar instantània, sinó que han de complir
+estricts \textbf{codis de xarxa} (\emph{Grid Codes}) establerts pels
+operadors dels sistemes de transport (TSO) i distribució (DSO).
+
+Per coordinar l'operació simultània de desenes o centenars d'inversors
+fotovoltaics distribuïts al parc i garantir el compliment de les ordres
+de control al punt d'interconnexió (\emph{Point of Common Coupling},
+PCC), es requereix un element de control centralitzat anomenat
+\textbf{Power Plant Controller (PPC)}.
+
+\begin{tcolorbox}[enhanced jigsaw, arc=.35mm, bottomrule=.15mm, bottomtitle=1mm, breakable, colback=white, colbacktitle=quarto-callout-note-color!10!white, colframe=quarto-callout-note-color-frame, coltitle=black, left=2mm, leftrule=.75mm, opacityback=0, opacitybacktitle=0.6, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Objectius Principals de la Pràctica}, titlerule=0mm, toprule=.15mm, toptitle=1mm]
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Comprendre la funció del Power Plant Controller (PPC)} com a
+  cervell de control centralitzat en plantes de generació renovable de
+  gran escala.
+\item
+  \textbf{Modelar una planta fotovoltaica simplificada a
+  MATLAB/Simulink}, representant la dinàmica de resposta dels inversors,
+  les restriccions d'assombrament atmosfèric i els retards puros del
+  sistema de comunicacions.
+\item
+  \textbf{Implementar l'algorisme de control de potència activa
+  mitjançant una M-S-Function a MATLAB}, avaluant la sintonització de
+  paràmetres del controlador PI (\(K_p\), \(K_i\)), la velocitat de
+  resposta i la gestió de fenòmens de saturació de l'integrador
+  (\emph{windup}).
+\item
+  \textbf{Avaluar el control combinat amb emmagatzematge d'energia
+  (BESS)} per a la limitació estricta de rampa de potència i
+  l'optimització de l'estat de càrrega (\emph{State of Charge},
+  \(SOC\)).
+\end{itemize}
+
+\end{tcolorbox}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Marc Normatiu i Funcionalitats del Power Plant Controller
+(PPC)}\label{marc-normatiu-i-funcionalitats-del-power-plant-controller-ppc}
+
+\subsection{Marc Normatiu i Codis de
+Xarxa}\label{marc-normatiu-i-codis-de-xarxa}
+
+Els codis de xarxa recullen les especificacions tècniques i els límits
+operatius obligatoris per mantenir la integritat, estabilitat i qualitat
+de subministrament de la xarxa elèctrica. A Europa, la norma
+\emph{Requirements for Generators} (RfG) desenvolupada per
+\textbf{ENTSO-E} (Reglament UE 2016/631) categoritza els mòduls de parc
+de potència (\emph{Power Park Modules}, PPM) i imposa requisits
+d'observabilitat i controlabilitat a partir de \(800    ext{ W}\) de
+potència nominal.
+
+El incompliment dels marges reglamentaris en les variables elèctriques
+desencadena severos problemes operatius:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Desviacions de Freqüència (Variable Global):} Directament
+  vinculades a l'equilibri entre la potència activa generada i la
+  demanda. Sobrepassar els límits provoca variacions no desitjades en la
+  velocitat de motors síncrons industrials, descalibratge de filtres
+  passius d'harmònics, alteració en bancs de condensadors i saturació
+  del nucli magnètic en transformadors i inductàncies, incrementant les
+  pèrdues per corrents de Foucault i distorsionant l'ona.
+\item
+  \textbf{Desviacions de Tensió (Variable Local):} Relacionades amb els
+  fluxos de potència reactiva a les xarxes de transport i distribució.
+  Les sobretensions eleven el risc de perforació en els aïllaments dels
+  equips i saturen màquines elèctriques, mentre que les subtensions
+  incrementen la corrent i les pèrdues per efecte Joule, limitant la
+  capacitat d'evacuació dels generadors i escurçant la vida útil de les
+  càrregues electròniques.
+\end{itemize}
+
+\subsection{Funcions Principals del
+PPC}\label{funcions-principals-del-ppc}
+
+El PPC centralitza les lectures en temps real de l'equip de mesura al
+PCC (\(P\), \(Q\), \(V\), \(f\)) i processa les consignes externes
+rebudes del TSO/DSO mitjançant la infraestructura SCADA/SmartBridge.
+Executa els seus algorismes en cicles periòdics amb temps de resposta
+que oscil·len des de \(100   ext{ ms}\) fins a pocs segons.
+
+\begin{tcolorbox}[enhanced jigsaw, arc=.35mm, bottomrule=.15mm, bottomtitle=1mm, breakable, colback=white, colbacktitle=quarto-callout-important-color!10!white, colframe=quarto-callout-important-color-frame, coltitle=black, left=2mm, leftrule=.75mm, opacityback=0, opacitybacktitle=0.6, rightrule=.15mm, title=\textcolor{quarto-callout-important-color}{\faExclamation}\hspace{0.5em}{Funcions Regulades del PPC}, titlerule=0mm, toprule=.15mm, toptitle=1mm]
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Limitació de Potència Activa (\emph{Active Power
+  Curtailment}):} Ajust del sostre màxim de potència injectable
+  (\(P_{TSO}\)) per gestionar congestions a les línies d'evacuació o
+  evitar sobrecàrregues a la xarxa.
+\item
+  \textbf{Control de Rampa (\emph{Ramp Rate Limitation}):} Limitació de
+  les pendents màximes de variació de potència (\(\Delta P / \Delta t\))
+  davant fluctuacions de radiació per pas de núvols.
+\item
+  \textbf{Regulació de Freqüència (\emph{f-P Droop Control}):} Modulació
+  de la potència activa en resposta a desviacions de freqüència
+  mitjançant característiques estàtiques de caiguda (\emph{droop} del
+  2\% al 10\%).
+\item
+  \textbf{Control de Potència Reactiva, Factor de Potència i Tensió
+  (\(V-Q\)):} Control independent de la corrent en quadratura (\(I_q\))
+  per mantenir el factor de potència o la tensió al PCC.
+\item
+  \textbf{Suport davant Faltes (\emph{Fault Ride-Through - LVRT/HVRT}):}
+  Injecció ultra-ràpida de corrent reactiva
+  (\(\Delta I_q / I_N \ge 2.0    ext{ p.u.}\)) en menys de
+  \(20    ext{ ms}\).
+\end{enumerate}
+
+\end{tcolorbox}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Descripció del Model de la Planta
+Fotovoltaica}\label{descripciuxf3-del-model-de-la-planta-fotovoltaica}
+
+Per analitzar la dinàmica de control del PPC en ràgim de transitoris
+``lents'', s'utilitza un model representatiu simplificat a
+MATLAB/Simulink que prescindeix de les dinàmiques de commutació
+electromagnètica ràpida (\(<20 ext{ ms}\)).
+
+\subsection{Arquitectura de la Planta}\label{arquitectura-de-la-planta}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Potència nominal total de la planta (\(P_{plant}\)):}
+  \(10    ext{ MW}\) (\(10000   ext{ kW}\)).
+\item
+  \textbf{Agrupació de generació:} 5 inversors fotovoltaics idèntics
+  connectats en paral·lel, cadascun amb una potència nominal de
+  \(P_{nom,i} = 2    ext{ MW}\) (\(2000    ext{ kW}\)).
+\item
+  \textbf{Punt d'Interconnexió (PCC):} Punt comú on se sumen totes les
+  corrents/potències dels inversors per a la seva evacuació a la xarxa.
+\end{itemize}
+
+\subsection{Model Simplificat de l'Inversor
+Fotovoltaic}\label{model-simplificat-de-linversor-fotovoltaic}
+
+El conjunt format pel camp fotovoltaic i el seu corresponent inversor es
+modela com un sistema de primer ordre amb un bloc de saturació a la
+sortida que representa el límit físic per irradiància i temperatura
+(\(P_{pv-av}\)):
+
+\[P_{pv,i}(s) = rac{1}{    au_{pv}s + 1} \cdot P_{pv-set,i}^*(s)\]
+
+On: * \(lpha \in [0, 1]\) és la consigna adimensional en per unitat
+(p.u.) emesa pel PPC. * \(P_{pv-set,i}^* = lpha \cdot P_{nom,i}\) és la
+consigna de potència activa en \$ ext\{kW\}\$ per a l'inversor \(i\). *
+\$ au\_\{pv\} = 0.5 ext\{ s\}\$ (\(500  ext{ ms}\)) representa la
+constant de temps equivalent de la resposta del bucle intern de
+l'inversor. * \(P_{pv-av}\) és la potència màxima disponible al costat
+DC sota les condicions solars instantànies.
+
+\subsection{Retards de Comunicació}\label{retards-de-comunicaciuxf3}
+
+La transmissió de dades entre la instrumentació del PCC, el PPC central
+i les unitats de control local dels inversors introdueix retards de
+xarxa. A Simulink, es representen mitjançant blocs de \textbf{retard
+pur} (\emph{Comm delay}) fixats en \(20   ext{ ms}\)
+(\(0.02    ext{ s}\)) tant al canal de realimentació de mesura com al
+canal de consigna.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Descripció de les Simulacions Realitzades i Model
+PPC}\label{descripciuxf3-de-les-simulacions-realitzades-i-model-ppc}
+
+\subsection{Algorisme del PPC en
+M-S-Function}\label{algorisme-del-ppc-en-m-s-function}
+
+El controlador central es programa mitjançant una \textbf{M-S-Function
+de MATLAB} amb un període de mostratge discret de
+\(T_{sample} = 200   ext{ ms}\) (\(0.2 ext{ s}\)).
+
+L'algorisme llegeix en cada període l'error de potència activa al PCC:
+
+\[e(k) = P_{pcc\_setpoint}(k) - P_{pcc\_meas}(k)\]
+
+I calcula la nova consigna global \(lpha(k)\) mitjançant l'equació en
+diferències d'un regulador PI:
+
+\[P_{tot}(k) = P_{tot}(k-1) + K_p \cdot [e(k) - e(k-1)] + K_i \cdot T_{sample} \cdot e(k)\]
+
+\[lpha(k) = rac{P_{tot}(k)}{P_{plant}}\]
+
+Aquesta única senyal \(lpha(k)\) es transmet a tots els inversors perquè
+cadascun calculi la seva referència local
+\(P_{ref,i} = lpha \cdot P_{nom,i}\).
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Anàlisi i Interpretació de
+Resultats}\label{anuxe0lisi-i-interpretaciuxf3-de-resultats}
+
+\subsection{Exercici 1: Justificació de la Necessitat del Controlador
+Central}\label{exercici-1-justificaciuxf3-de-la-necessitat-del-controlador-central}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}@{}}
+\caption{Resultats de la simulació en bucle obert (Exercici
+1)}\label{tbl-ejercicio1}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Escenari d'Assombrament
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Consigna TSO (\(P_{TSO}\))
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(P_{pv-av}\) Inversors 1 i 2
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Potència Lliurada PCC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Error Permanent al PCC
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Escenari d'Assombrament
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Consigna TSO (\(P_{TSO}\))
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(P_{pv-av}\) Inversors 1 i 2
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Potència Lliurada PCC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Error Permanent al PCC
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{Condició Nominal (Sense Núvols)} & \(10000  ext{ kW}\)
+(\(lpha=1.0\)) & \(2000 ext{ kW}\) & \(10000  ext{ kW}\) &
+\(0  ext{ kW}\) \\
+\textbf{Assombrament Parcial} & \(10000 ext{ kW}\) (\(lpha=1.0\)) &
+\(1500 ext{ kW}\) & \(9000   ext{ kW}\) & \(-1000  ext{ kW}\) \\
+\textbf{Assombrament Sever} & \(10000   ext{ kW}\) (\(lpha=1.0\)) &
+\(500  ext{ kW}\) & \(7000   ext{ kW}\) & \(-3000  ext{ kW}\) \\
+\textbf{Assombrament Sever en Curtailment} & \(5000 ext{ kW}\)
+(\(lpha=0.5\)) & \(500  ext{ kW}\) & \(4000   ext{ kW}\) &
+\(-1000  ext{ kW}\) \\
+\end{longtable}
+
+\textbf{Anàlisi Tècnic:} Els inversors 1 i 2 saturen la seva producció
+al seu límit tèrmic/solar instantani (\(1500   ext{ kW}\) o
+\(500    ext{ kW}\)). Els inversors 3, 4 i 5, en rebre únicament el
+valor \(lpha\) fixat per la consigna global, no incrementen la seva
+generació per compensar el dèficit. \textbf{Es demostra que el control
+en bucle obert no garanteix el compliment dels compromisos amb el TSO}.
+
+\subsection{Exercici 2: Sintonització i Dinàmica del Controlador
+PI}\label{exercici-2-sintonitzaciuxf3-i-dinuxe0mica-del-controlador-pi}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1667}}@{}}
+\caption{Avalació de combinacions de sintonització PI (Exercici
+2)}\label{tbl-ejercicio2}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Consigna \(P_{TSO}\) {[}kW{]}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(P_{pv-av,1,2}\) {[}kW{]}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(K_p\)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(K_i\)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Assoleix Consigna?
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Comportament Dinàmic i Sobrepic
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Consigna \(P_{TSO}\) {[}kW{]}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(P_{pv-av,1,2}\) {[}kW{]}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(K_p\)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\(K_i\)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Assoleix Consigna?
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Comportament Dinàmic i Sobrepic
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\(7000     o 5000\) & \(2000\) & \(0.5\) & \(0\) & \textbf{No}
+(\(P_{pcc} pprox 5200   ext{ kW}\)) & Sense sobrepic, però amb error
+permanent. \\
+\(7000     o 5000\) & \(2000\) & \(5.0\) & \(0\) & \textbf{Gairebé}
+(\(P_{pcc} pprox 5020  ext{ kW}\)) & Redueix l'error de ràgim permanent,
+però oscil·la. \\
+\(7000     o 5000\) & \(2000\) & \(0.5\) & \(0.1\) & \textbf{Sí} &
+Resposta extremadament lenta (\(t_{asent} pprox 15  ext{ s}\)). \\
+\(7000     o 5000\) & \(2000\) & \(0.5\) & \(1.0\) & \textbf{Sí} &
+\textbf{Ajust Òptim:} Temps d'asentament ràpid (\(\sim 3  ext{ s}\)) i
+nul sobrepic. \\
+\(7000     o 5000\) & \(2000\) & \(0.5\) & \(10.0\) & \textbf{Sí} &
+\textbf{Inestable:} Oscil·lacions severes per interacció amb retards. \\
+\(7000     o 5000\) & \(500\) & \(0.5\) & \(1.0\) & \textbf{Sí} & Eleva
+\(lpha\) perquè els Inv 3-5 compensin la manca dels Inv 1-2. \\
+\end{longtable}
+
+\subsection{Exercicis 3 i 4: Saturació i Lògica
+Anti-Windup}\label{exercicis-3-i-4-saturaciuxf3-i-luxf2gica-anti-windup}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\% Lògica Anti{-}Windup (Clamping) a la S{-}Function del PPC}
+\KeywordTok{if}\NormalTok{ (}\VariableTok{alpha\_unstat} \OperatorTok{\textgreater{}} \FloatTok{1.0} \OperatorTok{\&\&} \VariableTok{error} \OperatorTok{\textgreater{}} \FloatTok{0}\NormalTok{) }\OperatorTok{||}\NormalTok{ (}\VariableTok{alpha\_unstat} \OperatorTok{\textless{}} \FloatTok{0.0} \OperatorTok{\&\&} \VariableTok{error} \OperatorTok{\textless{}} \FloatTok{0}\NormalTok{)}
+    \CommentTok{\% Es congela l\textquotesingle{}integrador si la sortida està saturada i l\textquotesingle{}error mantindria la saturació}
+    \VariableTok{KI\_integrator} \OperatorTok{=} \VariableTok{KI\_integrator\_prev}\OperatorTok{;}
+\KeywordTok{else}
+    \VariableTok{KI\_integrator} \OperatorTok{=} \VariableTok{KI\_integrator\_prev} \OperatorTok{+} \VariableTok{Ki} \OperatorTok{*} \VariableTok{T\_sample} \OperatorTok{*} \VariableTok{error}\OperatorTok{;}
+\KeywordTok{end}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Exercici 5: Control Combinat amb Emmagatzematge BESS i
+Rampes}\label{exercici-5-control-combinat-amb-emmagatzematge-bess-i-rampes}
+
+L'emmagatzematge en bateries aporta el suport de potència activa
+necessari per donar compliment a les restriccions de rampa màxima
+(\(10\% P_{nom}/  ext{min} = 1    ext{ MW}/   ext{min}\)): *
+\textbf{Control Directe de Rampa vs Filtrat Pas Baix:} El control
+directe activa la bateria exclusivament quan la derivada de potència
+sobrepassa el límit (\(\Delta P / \Delta t > \Delta P_{max}\)), reduint
+dràsticament els cicles de càrrega/descàrrega. * \textbf{Estratègies
+d'Estat de Càrrega (\(SOC\)):} Operar amb un \(SOC^*\) dinàmic
+proporcional a la generació actual manté la bateria preparada davant
+possibles rampes de baixada o pujada.
+
+\[  ext{SOC}^*(t) = 0.4 + rac{0.6-0.4}{P_{plant}} \cdot P_{pv-meas}(t)\]
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Conclusions}\label{conclusions}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Invalidesa del Bucle Obert:} El control sense realimentació al
+  PCC no pot compensar pertorbacions solars locals ni assombraments
+  parcials als inversors.
+\item
+  \textbf{Robustesa del Controlador PI:} L'ajust \(K_p = 0.5\) i
+  \(K_i = 1.0\) garanteix una resposta ràpida (temps d'asentament
+  \(\sim 3    ext{ s}\)) i estable davant dels retards de comunicació de
+  \(20   ext{ ms}\).
+\item
+  \textbf{Necessitat de l'Anti-Windup:} La tècnica de \emph{clamping} és
+  indispensable per evitar el congelament de la resposta del PPC quan la
+  consigna del TSO supera la capacitat de generació real disponible.
+\item
+  \textbf{Sinergia amb BESS:} La coordinació del PPC amb bateries permet
+  suavitzar les rampes de potència provocades per passos de núvols,
+  protegint la xarxa elèctrica i optimitzant la vida útil de la bateria
+  mitjançant un \(SOC^*\) dinàmic.
+\end{enumerate}
+
+
+
+
+\end{document}

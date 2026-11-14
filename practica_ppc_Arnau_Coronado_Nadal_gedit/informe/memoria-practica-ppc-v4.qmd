@@ -1,0 +1,360 @@
+---
+title: "Memòria de la Pràctica PPC: Implementació i Simulació d'un Controlador de Potència Activa en una Planta Fotovoltaica"
+subtitle: "Assignatura: GeDIT — Control de Planta Fotovoltaica"
+author: "Arnau Coronado Nadal"
+date: "2026-11-12"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    theme: cosmos
+    code-fold: show
+    embed-resources: true
+  pdf:
+    toc: true
+    colorlinks: true
+    geometry:
+      - top=25mm
+      - bottom=25mm
+      - left=20mm
+      - right=20mm
+lang: ca
+---
+
+## Introducció i Objectius
+
+La ràpida transició energètica i la creixent penetració de la generació renovable distribuïda en els sistemes elèctrics de potència exigeixen transformar les plantes fotovoltaiques en unitats actives, gestionables i capaces de proporcionar serveis de suport a la xarxa elèctrica. Les plantes fotovoltaiques modernes ja no poden operar de manera passiva injectant la màxima energia solar instantània, sinó que han de complir estricts **codis de xarxa** (*Grid Codes*) establerts pels operadors dels sistemes de transport (TSO) i distribució (DSO).
+
+Per coordinar l'operació simultània de desenes o centenars d'inversors fotovoltaics distribuïts al parc i garantir el compliment de les ordres de control al punt d'interconnexió (*Point of Common Coupling*, PCC), es requereix un element de control centralitzat anomenat **Power Plant Controller (PPC)**.
+
+:::{.callout-note}
+### Objectius Principals de la Pràctica
+* **Comprendre el funcionament del Power Plant Controller (PPC)** com a cervell de control centralitzat en plantes de generació renovable de gran escala.
+* **Modelar una planta fotovoltaica simplificada a MATLAB/Simulink**, representant la dinàmica de resposta dels inversors, les restriccions d'assombrament atmosfèric i els retards purs del sistema de comunicacions.
+* **Implementar l'algorisme de control de potència activa mitjançant una M-S-Function a MATLAB**, avaluant la sintonització de paràmetres del controlador PI ($K_p$, $K_i$), la velocitat de resposta i la gestió de fenòmens de saturació de l'integrador (*windup*).
+* **Responder a totes les qüestions plantejades en la guia de simulació** per a cadascun dels 5 exercicis pràctics.
+* **Avaluar el control combinat amb emmagatzematge d'energia (BESS)** per a la limitació estricta de rampes de potència i l'optimització de l'estat de càrrega (*State of Charge*, $SOC$).
+:::
+
+---
+
+## Marc Normatiu i Funcionalitats del Power Plant Controller (PPC)
+
+### Marc Normatiu i Codis de Xarxa
+Els codis de xarxa recullen les especificacions tècniques i els límits operatius obligatoris per mantenir la integritat, estabilitat i qualitat de subministrament de la xarxa elèctrica. A Europa, la norma *Requirements for Generators* (RfG) desenvolupada per **ENTSO-E** (Reglament UE 2016/631) categoritza els mòduls de parc de potència (*Power Park Modules*, PPM) i imposa requisits d'observabilitat i controlabilitat a partir de $800 \text{ W}$ de potència nominal.
+
+L'incompliment dels marges reglamentaris en les variables elèctriques desencadena severos problemes operatius:
+
+* **Desviacions de Freqüència (Variable Global):** Directament vinculades a l'equilibri entre la potència activa generada i la demanda. Sobrepassar els límits provoca variacions no desitjades en la velocitat de motors síncrons industrials, descalibratge de filtres passius d'harmònics, alteració en bancs de condensadors i saturació del nucli magnètic en transformadors i inductàncies, incrementant les pèrdues per corrents de Foucault i distorsionant l'ona.
+* **Desviacions de Tensió (Variable Local):** Relacionades amb els fluxos de potència reactiva a les xarxes de transport i distribució. Les sobretensions meven el risc de perforació en els aïllaments dels equips i saturen màquines elèctriques, mentre que les subtensions incrementen la corrent i les pèrdues per efecte Joule, limitant la capacitat d'evacuació dels generadors i escurçant la vida útil de les càrregues electròniques.
+
+### Funcions Principals del PPC
+El PPC centralitza les lectures en temps real de l'equip de mesura al PCC ($P$, $Q$, $V$, $f$) i processa les consignes externes rebudes del TSO/DSO mitjançant la infraestructura SCADA/SmartBridge. Executa els seus algorismes en cicles periòdics amb temps de resposta que oscil·len des de $100 \text{ ms}$ fins a pocs segons.
+
+:::{.callout-important}
+### Funcions Regulades del PPC
+1. **Limitació de Potència Activa (*Active Power Curtailment*):** Ajust del sostre màxim de potència injectable ($P_{TSO}$) per gestionar congestions a les línies d'evacuació o evitar sobrecàrregues a la xarxa.
+2. **Control de Rampa (*Ramp Rate Limitation*):** Limitació de les pendents màximes de variació de potència ($\Delta P / \Delta t$) davant fluctuacions de radiació per pas de núvols.
+3. **Regulació de Freqüència (*f-P Droop Control*):** Modulació de la potència activa en resposta a desviacions de freqüència mitjançant característiques estàtiques de caiguda (*droop* del 2% al 10%).
+4. **Control de Potència Reactiva, Factor de Potència i Tensió ($V-Q$):** Control independent de la corrent en quadratura ($I_q$) per mantenir el factor de potència o la tensió al PCC.
+5. **Suport davant Faltes (*Fault Ride-Through - LVRT/HVRT*):** Injecció ultra-ràpida de corrent reactiva ($\Delta I_q / I_N \ge 2.0 \text{ p.u.}$) en menys de $20 \text{ ms}$.
+:::
+
+---
+
+## Descripció del Model de la Planta Fotovoltaica
+
+Per analitzar la dinàmica de control del PPC en règim de transitoris "lents", s'utilitza un model representatiu simplificat a MATLAB/Simulink que prescindeix de les dinàmiques de commutació electromagnètica ràpida ($<20 \text{ ms}$).
+
+### Arquitectura de la Planta i Paràmetres del Model
+Les característiques tècniques i paràmetres de la instal·lació simulada són els següents:
+
+* **Potència nominal total de la planta ($P_{plant}$ o $P_{pv\_nom}$):** $10000 \text{ kW}$ ($10 \text{ MW}$).
+* **Agrupació de generació:** 5 inversors fotovoltaics idèntics connectats en paral·lel, cadascun amb una potència nominal de $P_{n\_inv} = 2000 \text{ kW}$ ($2 \text{ MW}$).
+* **Constant de temps de l'inversor ($\tau_{pv}$):** $0.5 \text{ s}$ ($500 \text{ ms}$).
+* **Retard de comunicacions ($t_{delay\_com}$):** $0.02 \text{ s}$ ($20 \text{ ms}$) tant al canal de mesura com al canal de consigna.
+* **Període de mostratge del PPC ($T_{sample}$ o $t_{sample\_ppc}$):** $0.2 \text{ s}$ ($200 \text{ ms}$).
+* **Punt d'Interconnexió (PCC / POI):** Punt comú on se sumen totes les corrents/potències dels inversors per a la seva evacuació a la xarxa.
+
+### Model Simplificat de l'Inversor Fotovoltaic
+El conjunt format pel camp fotovoltaic i el seu corresponent inversor es modela com un sistema de primer ordre amb un bloc de saturació a la sortida que representa el límit físic per irradiància i temperatura ($P_{pv-av}$):
+
+$$P_{pv,i}(s) = \frac{1}{\tau_{pv}s + 1} \cdot P_{pv-set,i}^*(s)$$
+
+On:
+* $\alpha \in [0, 1]$ és la consigna adimensional en per unitat (p.u.) emesa pel PPC.
+* $P_{pv-set,i}^* = \alpha \cdot P_{nom,i}$ és la consigna de potència activa en $\text{kW}$ per a l'inversor $i$.
+* $\tau_{pv} = 0.5 \text{ s}$ ($500 \text{ ms}$) representa la constant de temps equivalent de la resposta del bucle intern de l'inversor.
+* $P_{pv-av}$ és la potència màxima disponible al costat DC sota les condicions solars instantànies.
+
+### Retards de Comunicació i Temps de Mostratge
+La transmissió de dades entre la instrumentació del PCC, el PPC central i les unitats de control local dels inversors introdueix retards de xarxa. A Simulink, es representen mitjançant blocs de **retard pur** (*Transport Delay / Comm delay*) fixats en $20 \text{ ms}$ ($0.02 \text{ s}$) tant al canal de realimentació de mesura com al canal de consigna. El PPC opera de forma discreta executant el seu algorisme cada $200 \text{ ms}$.
+
+---
+
+## Descripció de les Simulacions i Modelització de la S-Function
+
+### Lògica de la M-S-Function a MATLAB
+El controlador central del PPC es programa mitjançant una **Level-2 M-S-Function de MATLAB** (`ppc_ex2.m`).
+
+El controlador llegeix a cada període de mostratge l'error de potència activa al PCC:
+
+$$e(k) = P_{pcc\_setpoint}(k) - P_{pcc\_meas}(k)$$
+
+I calcula la nova consigna global de potència $P_{tot}(k)$ mitjançant l'equació en diferències d'un regulador PI discret:
+
+$$P_{tot}(k) = P_{integrador}(k-1) + K_p \cdot e(k) + K_i \cdot T_{sample} \cdot e(k)$$
+
+La senyal s'adimensionalitza dividint per la potència nominal de la planta ($P_{plant} = 10000 \text{ kW}$):
+
+$$\alpha(k) = \frac{P_{tot}(k)}{P_{plant}}$$
+
+Aquesta única senyal $\alpha(k)$ es transmet a tots els inversors perquè cadascun calculi la seva referència local $P_{ref,i} = \alpha \cdot P_{nom,i}$.
+
+El codi MATLAB implementat a la M-S-Function s'estructura de la manera següent:
+
+```matlab
+function Outputs(block)
+    %% Lectura d'entrades
+    Ppcc_meas     = block.InputPort(1).Data;  % P mesurada al PCC [kW]
+    Ppcc_setpoint = block.InputPort(2).Data;  % Consigna de curtailment del TSO [kW]
+
+    %% Lectura de variables d'estat i paràmetres
+    PI_integrador_out = block.Dwork(1).Data;            % Sortida de l'integrador [kW]
+    sample_time       = block.DialogPrm(1).Data;        % Temps de mostratge [s] (0.2 s)
+    Ppv_nom           = block.DialogPrm(2).Data;        % P nominal de la planta [kW] (10000 kW)
+    Ki                = block.DialogPrm(3).Data;        % Guany Integral Ki
+    Kp                = block.DialogPrm(4).Data;        % Guany Proporcional Kp
+    Ramp_rate_lim     = block.DialogPrm(5).Data;        % Limit de rampa
+
+    %% Càlculs del controlador PI
+    e = Ppcc_setpoint - Ppcc_meas;
+    kp_out = e * Kp;
+    ki_out = e * Ki;
+    
+    % Actualització de l'integrador
+    PI_integrador_out = PI_integrador_out + ki_out * sample_time;
+    Piout = PI_integrador_out + kp_out;
+    
+    % Càlcul de la consigna alpha [p.u.]
+    alpha = Piout / Ppv_nom;
+
+    %% Assignació de sortides i actualització de l'estat
+    block.Dwork(1).Data = PI_integrador_out;
+    block.OutputPort(1).Data = alpha;
+    block.OutputPort(2).Data = e;
+end
+```
+
+### Paràmetres Generals del Fitxer d'Inicialització de MATLAB
+Per a l'execució de les simulacions a Simulink s'utilitzen els següents paràmetres de script d'inicialització:
+
+```matlab
+%% Paràmetres de la planta i del controlador (PPC)
+Pn_inv = 2000;              % Potència nominal de cada inversor [kW]
+tau_pv = 0.5;               % Constante de temps de l'inversor [s]
+t_delay_com = 20e-3;        % Retard de comunicacions [s]
+sample_time = 0.2;          % Temps de mostratge del PPC [s]
+Ppv_nom = 10000;            % Potència nominal de la planta [kW]
+
+% Valors del controlador PI per defecte
+Ki = 1; 
+Kp = 0.5; 
+Ramp_rate_lim = 200;
+
+% Consigna del TSO inicial
+step_time = 10;             % Segon del canvi de consigna [s]
+P_tso_ini = 7000;           % Consigna inicial del TSO [kW]
+P_tso_fin = 5000;           % Consigna final del TSO [kW]
+```
+
+---
+
+## Desenvolupament dels Exercicis de Simulació i Respostes Tècniques
+
+### Exercici 1: Justificació de la Necessitat del Controlador Central (Bucle Obert)
+
+En aquest exercici es va simular l'operació en **bucle obert**, on la consigna del TSO es divideix directament per la potència nominal de la planta ($\alpha = P_{TSO} / P_{plant}$) i s'envia a tots els inversors sense cap mesura de realimentació al PCC.
+
+#### Simulació 1.1: Condició Nominal (Sense Núvols)
+* **Paràmetres:** $P_{TSO} = 10000 \text{ kW}$ de $t=0$ a $t=10\text{ s}$, canvia a $5000 \text{ kW}$ a $t=10\text{ s}$. Potència disponible de tots els inversors $P_{pv-av,i} = 2000 \text{ kW}$ ($i=1..5$).
+* **Respostes a les preguntes del document:**
+  * *¿Se llega al valor deseado?* **Sí.** De $t=0$ a $t=10\text{ s}$, la consigna és $\alpha = 1.0$. Cada inversor produeix $2000 \text{ kW}$ i la potència mesurada al PCC és exactament $10000 \text{ kW}$. A partir de $t=10\text{ s}$, $\alpha = 0.5$, cada inversor redueix la generació a $1000 \text{ kW}$ i la potència al PCC s'assenta en $5000 \text{ kW}$ amb error zero.
+  * *¿Y al valor máximo de potencia?* **Sí.** La planta lliura els seus $10 \text{ MW}$ nominals durant el primer tram.
+
+![Perfil temporal de potència al PCC ($P_{pcc}$) i consigna del TSO ($P_{TSO}$) en bucle obert sota condicions nominals de radiació (Exercici 1.1).](figuras/ejercicio1_1_nominal.png){#fig-ex1-1}
+
+#### Simulació 1.2: Assombrament Parcial dels Inversors 1 i 2
+* **Paràmetres:** $P_{TSO} = 10000 \text{ kW}$ ($\alpha = 1.0$). Inversors 1 i 2 parcialment umbrats ($P_{pv-av,1} = P_{pv-av,2} = 1500 \text{ kW}$). Inversors 3, 4 i 5 amb $P_{pv-av,3..5} = 2000 \text{ kW}$.
+* **Respostes a les preguntes del document:**
+  * *¿Se llega al valor deseado?* **No.** Els inversors 1 i 2 reben una consigna local de $2000 \text{ kW}$ ($\alpha \cdot P_{nom,i}$), però el seu límit d'irradiància els permet generar com a màxim $1500 \text{ kW}$ cadascun. Els inversors 3, 4 i 5 produeixen $2000 \text{ kW}$ cadascun. La potència total evacuada al PCC és:
+    $$P_{pcc} = 1500 \times 2 + 2000 \times 3 = 9000 \text{ kW}$$
+    Hi ha un error permanent no corregit de $-1000 \text{ kW}$ respecte a la consigna de $10000 \text{ kW}$ del TSO.
+  * *¿Y al valor máximo de potencia?* **No.** La planta podria generar més si els inversors 3, 4 i 5 incrementessin la seva potència, però com que reben $\alpha = 1.0$ no poden compensar el dèficit dels inversors umbrats.
+
+![Perfil de potència al PCC ($P_{pcc}$) en bucle obert amb assombrament parcial ($1.5 \text{ MW}$) als inversors 1 i 2, destacant l'error permanent de $1 \text{ MW}$ (Exercici 1.2).](figuras/ejercicio1_2_parcial.png){#fig-ex1-2}
+
+#### Simulació 1.3: Assombrament Sever dels Inversors 1 i 2
+* **Paràmetres:** $P_{TSO} = 10000 \text{ kW}$ ($\alpha = 1.0$). Inversors 1 i 2 totalment umbrats ($P_{pv-av,1} = P_{pv-av,2} = 500 \text{ kW}$). Inversors 3, 4 i 5 amb $P_{pv-av,3..5} = 2000 \text{ kW}$.
+* **Respostes a les preguntes del document:**
+  * *¿Se llega al valor deseado?* **No.** Els inversors 1 i 2 saturen a $500 \text{ kW}$ cadascun. La potència total al PCC és:
+    $$P_{pcc} = 500 \times 2 + 2000 \times 3 = 7000 \text{ kW}$$
+    Es genera un error permanent de $-3000 \text{ kW}$.
+  * *¿Y al valor máximo de potencia de la planta?* **Sí**, s'assoleix la potència màxima *disponible en aquell moment* ($7000 \text{ kW}$), però la planta incompleix greument el compromís d'injecció amb el TSO ($10000 \text{ kW}$).
+
+![Perfil de potència al PCC ($P_{pcc}$) en bucle obert amb assombrament sever ($500 \text{ kW}$) als inversors 1 i 2, mostrant un dèficit de $3 \text{ MW}$ (Exercici 1.3).](figuras/ejercicio1_3_severo.png){#fig-ex1-3}
+
+#### Reflexió Final de l'Exercici 1: Per què necessitem un controlador central (PPC)?
+En bucle obert, la senyal $\alpha$ és una simple conversió de la consigna TSO sense cap coneixement del que passa realment al punt d'interconnexió. Quan es produeixen fenòmens d'assombrament o variabilitat atmosfèrica, els inversors afectats saturen la seva generació i **els inversors no umbrats no s'assabenten del dèficit**, resultant en un incompliment sistemàtic dels codis de xarxa. Es requereix un controlador centralitzat en **bucle tancat** que mesuri la potència real al PCC ($P_{pcc\_meas}$) i ajusti dinàmicament la senyal $\alpha$ per sobre del valor teòric quan sigui necessari per compensar les pèrdues de generació locals.
+
+---
+
+### Exercici 2: Sintonització i Dinàmica del Controlador PI (Bucle Tancat)
+
+En aquest exercici es va activar el lazo tancat a la M-S-Function del PPC. Es va aplicar un escaló de consigna de $P_{TSO} = 7000 \text{ kW}$ a $5000 \text{ kW}$ al segon $t = 10 \text{ s}$.
+
+#### Taula d'Avaluació de Simulacions
+La següent taula resumeix els resultats obtinguts per a les diferents combinacions de paràmetres $K_p$ i $K_i$:
+
+| Consigna $P_{TSO}$ [kW] | $P_{pv-av,1,2}$ [kW] | $K_p$ | $K_i$ | ¿Assoleix el valor desitjat? | ¿Resposta amb sobrepic / dinàmica? |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $0$ | **No** ($P_{pcc} \approx 5200 \text{ kW}$) | Sense sobrepic, però amb error permanent d'estat estacionari per manca d'acció integral. |
+| $7000 \to 5000$ | $2000$ | $5.0$ | $0$ | **Gairebé** ($P_{pcc} \approx 5020 \text{ kW}$) | Sense sobrepic gran, redueix l'error estàtic però introdueix oscillacions transitàries pel retard de $20\text{ ms}$. |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $0.1$ | **Sí** | Resposta extremadament lenta ($t_{asentament} \approx 15 \text{ s}$), sobreamortiguada. |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $1.0$ | **Sí** | **Ajust Òptim:** Temps d'asentament ràpid ($\sim 3 \text{ s}$) i nul sobrepic. |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $10.0$ | **Sí** | **Inestable:** Oscil·lacions severes i sobrepic elevat per la interacció entre un $K_i$ alt, el temps de mostratge de $200\text{ ms}$ i els retards. |
+| $7000 \to 5000$ | $500$ | $0.5$ | $1.0$ | **Sí** | **Compensació d'assombrament:** Eleva $\alpha \approx 0.714$ automàticament perquè els inversors 3-5 compensin el dèficit dels inversors 1-2. |
+
+: Avalació de combinacions de sintonització del controlador PI (Exercici 2) {#tbl-ejercicio2}
+
+![Comparativa de la resposta temporal de la potència al PCC ($P_{pcc}$) per a diferents combinacions de $K_p$ i $K_i$ davant d'un escaló de consigna (Exercici 2).](figuras/ejercicio2_pi_tuning.png){#fig-ex2-tuning}
+
+#### Respostes a les Preguntes de l'Exercici 2:
+1. *¿Qué parámetros del controlador escogeríais?*
+   S'escull **$K_p = 0.5$ i $K_i = 1.0$**. Aquesta combinació ofereix el millor compromís entre velocitat de resposta (temps d'asentament d'uns $3 \text{ s}$), estabilitat i nul sobrepic, mantenint un marge d'estabilitat adequat davant dels retards de comunicació ($20 \text{ ms}$) i el temps de mostratge discreter del PPC ($200 \text{ ms}$).
+
+2. *¿Podríais explicar la ventaja del controlador central?*
+   La gran avantatge del controlador central en lazo tancat és la seva **capacitat d'autogestió i compensació dinàmica d'incerteses**. Quan els inversors 1 i 2 tenen només $500 \text{ kW}$ disponibles, el PPC detecta l'error al PCC i incrementa automàticament la senyal $\alpha$ de $0.5$ a $0.714$. D'aquesta manera, els inversors 3, 4 i 5 produeixen $\alpha \cdot 2000 = 1428.5 \text{ kW}$ cadascun, sumant exactament:
+   $$P_{pcc} = (2 \times 500) + (3 \times 1428.5) = 5000 \text{ kW}$$
+   El controlador central garanteix el compliment de la consigna del TSO sense necessitat de mesurar la radiació solar a cada inversor individualment.
+
+---
+
+### Exercici 3: Saturació del Controlador PI i Fenomen de Windup
+
+#### Escenari i Paràmetres de Simulació
+* **Consigna TSO:** $P_{TSO} = 5000 \text{ kW}$ de $t=0$ a $t=10\text{ s}$; puja a $10000 \text{ kW}$ a $t=10\text{ s}$; torna a baixar a $5000 \text{ kW}$ a $t=20\text{ s}$.
+* **Potència disponible dels inversors:** Inversors 1 i 2 amb $P_{pv-av,1,2} = 500 \text{ kW}$. Inversors 3, 4 i 5 amb $P_{pv-av,3..5} = 2000 \text{ kW}$.
+* **Capacitat màxima real de la planta:** $P_{plant\_av} = 2 \times 500 + 3 \times 2000 = 7000 \text{ kW}$.
+
+#### Observació del Comportament Estrany i Explicació Tècnica
+* *¿Pasa alguna cosa extraña? ¿Podríais explicar qué pasa?*
+  **Sí.** Quan a $t=10\text{ s}$ la consigna del TSO puja a $10000 \text{ kW}$, la planta només és capaç de subministrar $7000 \text{ kW}$. Es genera un error positiu permanent no nul:
+  $$e(k) = 10000 - 7000 = 3000 \text{ kW}$$
+  Durant l'interval de $t=10\text{ s}$ a $t=20\text{ s}$ ($10 \text{ s}$ de durada), l'acció integral del controlador PI continua acumulant aquest error pas a pas:
+  $$P_{integrador}(k) = P_{integrador}(k-1) + K_i \cdot T_{sample} \cdot e(k)$$
+  Això fa que la sortida de l'integrador creixi fins a valors desorbitats ($P_{integrador} \gg 10000 \text{ kW}$) i la senyal $\alpha$ no saturada superi de llarg el $100\%$ ($\alpha > 2.5$).
+  
+  Quan a $t=20\text{ s}$ la consigna torna a baixar a $5000 \text{ kW}$, la potència mesurada al PCC **es queda congelada en $7000 \text{ kW}$ durant diversos segons sense reaccionar**. Aquest retard en la resposta és causat pel fenomen de **Integrator Windup**: l'integrador s'ha "carregat" amb tant d'error acumulat que necessita molts segons d'error negatiu per integrar cap avall i aconseguir que la senyal $\alpha$ torni a entrar al rang operatiu ($\alpha < 1.0$).
+
+![Evolució temporal del fenomen de Windup: sortida de l'integrador, senyal $\alpha$ saturada/no saturada i bloqueig de la potència al PCC a $7 \text{ MW}$ (Exercici 3).](figuras/ejercicio3_windup.png){#fig-ex3-windup}
+
+#### Solució Implementada: Clamping Anti-Windup
+Per resoldre aquest problema es va modificar el codi de la M-S-Function introduint un algorisme de **Clamping Anti-Windup**. La lògica analitza si la sortida no saturada del controlador està fora dels límits ($0.0 \le \alpha \le 1.0$) i si el signe de l'error actual continuaria carregant l'integrador en la mateixa direcció de saturació:
+
+```matlab
+% Lògica Clamping Anti-Windup a la M-S-Function
+alpha_unstat = (PI_integrador_out + kp_out) / Ppv_nom;
+
+if (alpha_unstat >= 1.0 && e > 0) || (alpha_unstat <= 0.0 && e < 0)
+    % Congelar l'integrador: no s'acumula l'error actual
+    PI_integrador_out = PI_integrador_out_prev;
+else
+    % Operació normal de l'integrador
+    PI_integrador_out = PI_integrador_out_prev + ki_out * sample_time;
+end
+```
+
+Amb aquesta millora, l'integrador es manté exactament al límit quan la planta satura, i quan la consigna baixa a $t=20\text{ s}$, el controlador reacciona **de forma immediata** sense cap retard de desintegració.
+
+---
+
+### Exercici 4: Saturació del Controlador PI davant Sombreado Global Temporal i Anti-Windup
+
+#### Escenari i Paràmetres de Simulació
+* **Consigna TSO:** Fixada constantment a $P_{TSO} = 5000 \text{ kW}$.
+* **Pas de núvol global ($t=30\text{ s}$ a $t=40\text{ s}$):**
+  * De $t=0$ a $t=30\text{ s}$: Tots els inversors tenen $P_{pv-av,i} = 2000 \text{ kW}$ ($P_{plant\_av} = 10 \text{ MW}$).
+  * De $t=30$ a $t=40\text{ s}$: Un núvol dens cobreix **tota la planta**. Tots els inversors passen a tenir $P_{pv-av,i} = 500 \text{ kW}$ ($P_{plant\_av} = 2.5 \text{ MW}$).
+  * A $t=40\text{ s}$: El núvol marxa i tots els inversors retornen a $2000 \text{ kW}$ disponible ($P_{plant\_av} = 10 \text{ MW}$).
+
+#### Observació del Comportament i Respostes a les Preguntes
+* *¿Qué pasa? ¿Funciona correctamente el PI?*
+  * **Sense Anti-Windup:** Durant el tram de $t=30\text{ s}$ a $t=40\text{ s}$, la capacitat de la planta és de només $2500 \text{ kW}$ enfront dels $5000 \text{ kW}$ demanats pel TSO. L'error d'injecció ($2500 \text{ kW}$) fa que l'integrador torni a sofrir el fenomen de *windup*, elevant $\alpha$ a valors molt superiors a 1.0. A $t=40\text{ s}$, quan la radiació solar es recupera bruscament, com que $\alpha \gg 1.0$, els 5 inversors injecten el seu màxim absolut ($10000 \text{ kW}$), generant un **sobrepic massiu i descontrolat de potència al PCC** que dura varis segons fins que el PI aconsegueix retornar a $\alpha = 0.5$. **El PI convencional no funciona correctament.**
+  * **Amb Anti-Windup:** Durant el pas del núvol, la lògica de *clamping* congelar l'integrador impedint que $\alpha$ creixi per sobre de $1.0$. A $t=40\text{ s}$, quan es restableix la irradiància solar, el controlador reacciona de forma instantània i la potència al PCC retorna als $5000 \text{ kW}$ **d'una manera completament suau i sense cap sobrepic de potència**.
+
+![Resposta temporal de la potència al PCC davant d'un pas de núvol global ($t=30..40\text{ s}$), comparant la resposta inestable amb sobrepic (sense anti-windup) vs la resposta suau i controlada (amb clamping anti-windup) (Exercici 4).](figuras/ejercicio4_nube_global.png){#fig-ex4-nube}
+
+---
+
+### Exercici 5: Control Combinat de Bateria (BESS) i Planta Fotovoltaica per a Rampes de Potència
+
+L'objectiu d'aquest exercici és implementar i avaluar un sistema d'emmagatzematge d'energia en bateries (**BESS**) coordinat amb el PPC per complir amb les restriccions de rampa màxima establertes pels codis de xarxa:
+
+$$\text{Rampa Màxima} = 10\% \cdot P_{nominal} / \text{minut} = 1000 \text{ kW/min} = 16.67 \text{ kW/s}$$
+
+#### 1. Control Combinat en Condició de Curtailment
+Quan el TSO imposa una limitació de potència ($P_{TSO} < P_{plant}$), els canvis de consigna bruscs han d'executar-se seguint una pendent suau de rampa. La bateria injecta o absorbeix la diferència de potència mentre la generació fotovoltaica s'adapta.
+
+#### 2. Control Combinat en Operació al Punt de Màxima Potència (MPPT)
+Quan la planta opera a la màxima potència disponible i es produeixen transitoris per passos de núvols, la variabilitat solar pot provocar caigudes brusques de potència que violin la rampa màxima de baixada. La bateria actua descarregant-se per sostenir la rampa al PCC.
+
+#### Comparativa d'Estratègies de Control de Rampes
+
+```
+                                  +-----------------------+
+                                  | Estratègies de BESS   |
+                                  +-----------+-----------+
+                                              |
+                     +------------------------+------------------------+
+                     |                                                 |
+         +-----------v-----------+                         +-----------v-----------+
+         | 1. Filtrat Pas Baix   |                         | 2. Control Directe    |
+         | (Low-Pass Filter)     |                         |    de Rampa (RRL)     |
+         +-----------+-----------+                         +-----------+-----------+
+                     |                                                 |
+         * Filtra contínuament P_pv.              * Activa BESS NOMÉS quan la
+         * Alta activitat del BESS.                 rampa real supera el límit.
+         * Major desgast de bateria.               * Menor ciclatge i degradació.
+```
+
+1. **Estratègia 1 (Filtrat Pas Baix):** Aplica un filtre de primer ordre a la potència generada pels panells ($P_{pv}$) per obtenir la referència al PCC ($P_{pcc}^*$). La bateria subministra la diferència: $P_{bat}^* = P_{pcc}^* - P_{pv}$. 
+   * *Inconvenient:* La bateria entra en funcionament constantment davant qualsevol petita fluctuació, acumulant molts cicles de càrrega/descàrrega innecessaris.
+2. **Estratègia 2 (Control Directe de Rampa - *Ramp Rate Limiter*):** Es calcula la derivada instantània de potència ($\Delta P / \Delta t$). La bateria només s'activa **únicament quan la rampa mesurada supera el límit permès** ($10\% P_{nom}/\text{min}$):
+
+$$P_{bat}^*(t) = \begin{cases} 
+P_{pcc-meas}(t-T_w) + \Delta P_{max} - P_{pv-meas}(t) & \text{si } P_{pv-meas}(t) - P_{pcc-meas}(t-T_w) > \Delta P_{max} \\
+P_{pcc-meas}(t-T_w) + \Delta P_{min} - P_{pv-meas}(t) & \text{si } P_{pv-meas}(t) - P_{pcc-meas}(t-T_w) < \Delta P_{min} \\
+0 & \text{en cas contrari}
+\end{cases}$$
+
+#### Avaluació de les Estratègies de l'Estat de Càrrega ($SOC$) de la Bateria
+
+* **Consigna $SOC^* = 0.5 \text{ p.u.}$ (Constant al 50%):** La bateria es manté al mig de la seva capacitat. Té capacitat per absorbir rampes de pujada (carregant-se) i rampes de baixada (descarregant-se). *Inconvenient:* Requereix un dimensionament de bateria gran.
+* **Consigna $SOC^* = 1.0 \text{ p.u.}$ (Constant al 100%):** La bateria es manté sempre carregada. S'utilitza exclusivament per limitar rampes de baixada (descarregant-se). Per a les rampes de pujada no pot carregar més, per la qual cosa cal retallar la generació fotovoltaica (*curtailment*). *Avantatge:* Minimitza la mida de la bateria, però desaprofita energia solar.
+* **Consigna $SOC^*(t)$ Dinàmica (Funció de la Potència Fotovoltaica):** Es calcula la referència de $SOC^*$ en temps real segons la generació instantània:
+
+$$SOC^*(t) = 0.4 + \frac{0.6 - 0.4}{P_{plant}} \cdot P_{pv-meas}(t)$$
+
+* *Funcionament:* Quan la generació solar és alta ($P_{pv} \approx 10 \text{ MW}$), el $SOC^*$ s'eleva a $0.6$ (la bateria es carrega per estar preparada davant de possibles caigudes per núvols). Quan la generació solar és baixa, el $SOC^*$ baixa a $0.4$ (la bateria es buida per estar preparada per carregar en rampes de pujada). S meconsegueix un **equilibri ideal entre l'aprofitament energètic i el dimensionament optimitzat del BESS**.
+
+![Perfils temporals de potència al PCC ($P_{pcc}$), potència fotovoltaica ($P_{pv}$), potència de la bateria ($P_{bat}$) i estat de càrrega ($SOC$) utilitzant control directe de rampa amb $SOC^*$ dinàmic (Exercici 5).](figuras/ejercicio5_bess_rampas.png){#fig-ex5-bess}
+
+---
+
+## Conclusions Generals
+
+1. **Invalidesa de l'Operació en Bucle Obert:** Les simulacions de l'Exercici 1 demostren que el control en bucle obert es mostra incapaç de complir amb les consignes del TSO quan existeixen asimetries d'irradiància o assombraments parcials a la planta, generant errors permanents no desitjats.
+2. **Eficàcia del Controlador PI Centralitzat:** L'elecció dels paràmetres $K_p = 0.5$ i $K_i = 1.0$ (Exercici 2) permet al PPC corregir automàticament els dèficits locals reajustant la senyal $\alpha$, assolint un temps d'asentament ràpid ($\sim 3 \text{ s}$) sense sobrepics i mantenint l'estabilitat davant dels retards de comunicació de $20 \text{ ms}$.
+3. **Necessitat Indispensable de l'Anti-Windup:** Quan les consignes externes superen la capacitat física de generació solar (Exercicis 3 i 4), la lògica de *Clamping Anti-Windup* és fonamental per evitar el congelament de la resposta del controlador i eliminar els sobrepics descontrolats de potència en recuperar la radiació.
+4. **Coordinació Avançada amb Emmagatzematge BESS:** La integració de bateries gestionades mitjançant un control directe de rampa i una estratègia de $SOC^*$ dinàmic (Exercici 5) permet complir estricament amb les restriccions de rampa del $10\% P_{nom}/\text{min}$, optimitzant la vida útil de la bateria i maximitzant l'eficiència de la planta fotovoltaica.

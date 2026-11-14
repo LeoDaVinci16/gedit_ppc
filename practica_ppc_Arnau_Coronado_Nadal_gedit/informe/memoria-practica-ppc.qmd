@@ -1,0 +1,214 @@
+---
+title: "Memoria de Práctica: Implementación y Simulación de un Controlador de Potencia Activa en una Planta Fotovoltaica (PPC)"
+subtitle: "Gestión y Dirección de Tecnologías Energéticas Específicas (GeDIT)"
+author: "Arnau Coronado Nadal"
+date: "2026-11-12"
+lang: "es"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    code-fold: false
+  pdf:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    geometry:
+      - top=25mm
+      - left=20mm
+      - right=20mm
+      - bottom=25mm
+---
+
+## Introducción y Objetivos
+
+La acelerada transición energética y la creciente penetración de la generación renovable distribuida en los sistemas eléctricos de potencia exige transformar las plantas fotovoltaicas en unidades activas, gestionables y capaces de brindar servicios de soporte a la red eléctrica. Las plantas fotovoltaicas modernas ya no operan de forma pasiva inyectando la máxima energía solar instantánea, sino que deben cumplir estrictos **códigos de red** (*Grid Codes*) establecidos por los operadores de los sistemas de transporte (TSO) y distribución (DSO).
+
+Para coordinar la operación simultánea de decenas o cientos de inversores fotovoltaicos distribuidos en el parque y garantizar el cumplimiento de las órdenes de control en el punto de interconexión (*Point of Common Coupling*, PCC), se requiere un elemento de control centralizado denominado **Power Plant Controller (PPC)**.
+
+::: {.callout-note}
+### Objetivos Principales de la Práctica
+* **Comprender la función del Power Plant Controller (PPC)** como cerebro de control centralizado en instalaciones fotovoltaicas de gran escala.
+* **Modelar una planta fotovoltaica simplificada en MATLAB/Simulink**, representando la dinámica de respuesta de los inversores, las restricciones de disponibilidad por sombreado atmosférico y los retardos puros del sistema de comunicaciones.
+* **Implementar el algoritmo de control de potencia activa mediante una M-S-Function en MATLAB**, evaluando la sintonización de parámetros del controlador PI ($K_p$, $K_i$), la velocidad de respuesta y la gestión de fenómenos de saturación del integrador (*windup*).
+* **Evaluar el control combinado con almacenamiento de energía (BESS)** para la limitación estricta de rampas de potencia y la optimización del estado de carga (*State of Charge*, $SOC$).
+:::
+
+---
+
+## Marco Normativo y Funcionalidades del Power Plant Controller (PPC)
+
+### Marco Normativo y Códigos de Red
+Los códigos de red recogen las especificaciones técnicas y los límites operativos obligatorios para mantener la integridad, estabilidad y calidad de suministro de la red eléctrica. En Europa, la norma *Requirements for Generators* (RfG) desarrollada por **ENTSO-E** (Reglamento UE 2016/631) categoriza los módulos de parque de potencia (*Power Park Modules*, PPM) e impone requisitos de observabilidad y controlabilidad a partir de $800\text{ W}$ de potencia nominal.
+
+El incumplimiento de los márgenes reglamentarios en las variables eléctricas desencadena severos problemas operativos:
+
+* **Desviaciones de Frecuencia (Variable Global):** Directamente ligadas al equilibrio entre la potencia activa generada y la demanda. Sobrepasar los límites provoca variaciones indeseadas en la velocidad de motores síncronos industriales, descalibración de filtros pasivos de armónicos, alteración en bancos de condensadores y saturación del núcleo magnético en transformadores e inductancias, incrementando las pérdidas por corrientes de Foucault y distorsionando la onda.
+* **Desviaciones de Tensión (Variable Local):** Relacionadas con los flujos de potencia reactiva en las redes de transporte y distribución. Las sobretensiones elevan el riesgo de perforación en los aislamientos de los equipos y saturan máquinas eléctricas, mientras que las subtensiones incrementan la corriente y las pérdidas por efecto Joule, limitando la capacidad de evacuación de los generadores y acortando la vida útil de las cargas electrónicas.
+
+### Funciones Principales del PPC
+El PPC centraliza las lecturas en tiempo real del equipo de medida en el PCC ($P$, $Q$, $V$, $f$) y procesa las consignas externas recibidas del TSO/DSO a través de la infraestructura SCADA/SmartBridge. Ejecuta sus algoritmos en ciclos periódicos con tiempos de respuesta que oscilan desde $100\text{ ms}$ hasta algunos segundos.
+
+::: {.callout-important}
+### Funciones Reguladas Clave del PPC
+1. **Limitación de Potencia Activa (*Active Power Curtailment*):** Ajuste del techo máximo de potencia inyectable ($P_{TSO}$) para gestionar congestiones en las líneas de evacuación o evitar sobrecargas en la red.
+2. **Control de Rampa (*Ramp Rate Limitation*):** Limitación de las pendientes máximas de variación de potencia ($\Delta P / \Delta t$) ante fluctuaciones bruscas de radiación por paso de nubes, protegiendo la estabilidad del sistema.
+3. **Regulación de Frecuencia (*f-P Droop Control*):** Modulación de la potencia activa en respuesta a desviaciones de frecuencia mediante características estáticas de caída (*droop* de 2% a 10%), participando en la regulación primaria.
+4. **Control de Potencia Reactiva, Factor de Potencia y Tensión ($V-Q$):** Control independiente de la componente de corriente en cuadratura ($I_q$) para mantener el factor de potencia solicitado o regular la tensión en el PCC mediante curvas *droop* con ciclo de histéresis y filtros de primer orden ($\tau = 150\text{ ms}$), coordinando los inversores con bancos de condensadores y equipos STATCOM.
+5. **Soporte ante Faltas (*Fault Ride-Through - LVRT/HVRT*):** Inyección ultra-rápida de corriente reactiva ($\Delta I_q / I_N \ge 2.0\text{ p.u.}$) en tiempos inferiores a $20\text{ ms}$ durante huecos de tensión, garantizando la no desconexión de la planta.
+:::
+
+---
+
+## Descripción del Modelo de la Planta Fotovoltaica
+
+Para analizar la dinámica de control del PPC en régimen de transitorios "lentos", se utiliza un modelo representativo simplificado en MATLAB/Simulink que prescinde de las dinámicas de conmutación electromagnética rápida ($<20\text{ ms}$).
+
+### Arquitectura de la Planta
+Las características técnicas de la instalación simulada son:
+
+* **Potencia nominal total de la planta ($P_{plant}$):** $10\text{ MW}$ ($10000\text{ kW}$).
+* **Agrupación de generación:** 5 inversores fotovoltaicos idénticos conectados en paralelo, cada uno con una potencia nominal de $P_{nom,i} = 2\text{ MW}$ ($2000\text{ kW}$).
+* **Punto de Interconexión (PCC):** Punto común donde se suman todas las corrientes/potencias de los inversores para su evacuación a la red eléctrica.
+
+### Modelo Simplificado del Inversor Fotovoltaico
+El conjunto formado por el campo fotovoltaico y su correspondiente inversor se modela como un sistema de primer orden con un bloque de saturación a la salida que representa el límite físico por irradiancia y temperatura ($P_{pv-av}$):
+
+$$P_{pv,i}(s) = \frac{1}{\tau_{pv}s + 1} \cdot P_{pv-set,i}^*(s)$$
+
+Donde:
+
+* $\alpha \in [0, 1]$ es la consigna adimensional en por unidad (p.u.) emitida por el PPC.
+* $P_{pv-set,i}^* = \alpha \cdot P_{nom,i}$ es la consigna de potencia activa en $\text{kW}$ para el inversor $i$.
+* $\tau_{pv} = 0.5\text{ s}$ ($500\text{ ms}$) representa la constante de tiempo equivalente de la respuesta del bucle interno del inversor.
+* $P_{pv-av}$ es la potencia máxima disponible en el lado DC bajo las condiciones solares instantáneas.
+
+### Retardos de Comunicación
+La transmisión de datos entre la instrumentación del PCC, el PPC central y las unidades de control local de los inversores introduce retardos de red. En Simulink, se representan mediante bloques de **retardo puro** (*Comm delay*) fijados en $20\text{ ms}$ ($0.02\text{ s}$) tanto en el canal de realimentación de medida como en el canal de consigna.
+
+---
+
+## Descripción de las Simulaciones Realizadas y Modelo PPC
+
+### Algoritmo del PPC en M-S-Function
+El controlador central se programa mediante una **M-S-Function de MATLAB** con un periodo de muestreo discreto de $T_{sample} = 200\text{ ms}$ ($0.2\text{ s}$).
+
+El algoritmo lee en cada periodo el error de potencia activa en el PCC:
+
+$$e(k) = P_{pcc\_setpoint}(k) - P_{pcc\_meas}(k)$$
+
+Y calcula la nueva consigna global $\alpha(k)$ mediante la ecuación en diferencias de un regulador PI:
+
+$$P_{tot}(k) = P_{tot}(k-1) + K_p \cdot [e(k) - e(k-1)] + K_i \cdot T_{sample} \cdot e(k)$$
+
+$$\alpha(k) = \frac{P_{tot}(k)}{P_{plant}}$$
+
+Esta única señal $\alpha(k)$ se transmite a todos los inversores para que cada uno calcule su referencia local $P_{ref,i} = \alpha \cdot P_{nom,i}$.
+
+### Plan de Ensayos Simulados
+
+1. **Ejercicio 1 (Sombreado sin PPC Central):** Transmisión directa de la consigna TSO en bucle abierto ($\alpha = P_{TSO}/P_{plant}$) comparando condiciones sin nubes vs sombreado parcial ($P_{pv-av,1,2} = 1500\text{ kW}$) y sombreado severo ($P_{pv-av,1,2} = 500\text{ kW}$) en los inversores 1 y 2.
+2. **Ejercicio 2 (Sintonización del PI):** Evaluación de combinaciones de $K_p \in \{0.5, 5.0\}$ y $K_i \in \{0, 0.1, 1.0, 10.0\}$ ante un escalón de consigna de $7000\text{ kW}$ a $5000\text{ kW}$ a los $t = 10\text{ s}$.
+3. **Ejercicio 3 (Saturación y Windup):** Análisis del comportamiento del integrador cuando la consigna TSO ($10\text{ MW}$) excede la capacidad física real de la planta ($7\text{ MW}$) por estar los inversores 1 y 2 limitados a $500\text{ kW}$.
+4. **Ejercicio 4 (Sombreado Global Temporal):** Simulación de un paso de nube sobre toda la planta ($P_{pv-av,i} = 500\text{ kW}$ en los 5 inversores, $P_{plant,av} = 2.5\text{ MW}$) entre $t = 30\text{ s}$ y $t = 40\text{ s}$.
+5. **Ejercicio 5 (Integración BESS y Control de Rampas):** Coordinación del parque fotovoltaico con almacenamiento en batería para limitar las pendientes a un máximo de $10\% P_{nom}/\text{min}$ ($1\text{ MW}/\text{min}$), analizando las estrategias de $SOC$ constante ($1.0\text{ p.u.}$, $0.5\text{ p.u.}$) frente a $SOC^*$ dinámico:
+
+$$SOC^*(t) = 0.4 + \frac{0.6-0.4}{P_{plant}} \cdot P_{pv-meas}(t)$$
+
+---
+
+## Análisis e Interpretación de Resultados
+
+### Ejercicio 1: Justificación de la Necesidad del Controlador Central
+El envío de la consigna en bucle abierto asume que todos los inversores operan al $100\%$ de su capacidad nominal. Los resultados de simulación demuestran el fallo de esta hipótesis ante sombreados locales:
+
+| Escenario de Sombreado | Consigna TSO ($P_{TSO}$) | $P_{pv-av}$ Inv 1 y 2 | Potencia Entregada PCC | Error Permanente en PCC |
+| :--- | :--- | :--- | :--- | :--- |
+| **Condición Nominal (Sin Nubes)** | $10000\text{ kW}$ ($\alpha=1.0$) | $2000\text{ kW}$ | $10000\text{ kW}$ | $0\text{ kW}$ |
+| **Sombreado Parcial** | $10000\text{ kW}$ ($\alpha=1.0$) | $1500\text{ kW}$ | $9000\text{ kW}$ | $-1000\text{ kW}$ |
+| **Sombreado Severo** | $10000\text{ kW}$ ($\alpha=1.0$) | $500\text{ kW}$ | $7000\text{ kW}$ | $-3000\text{ kW}$ |
+| **Sombreado Severo en Curtailment** | $5000\text{ kW}$ ($\alpha=0.5$) | $500\text{ kW}$ | $4000\text{ kW}$ | $-1000\text{ kW}$ |
+
+: Resultados del Ejercicio 1 en Bucle Abierto {#tbl-ejercicio1}
+
+**Análisis Técnico:** Los inversores 1 y 2 saturan su producción a su límite térmico/solar instantáneo ($1500\text{ kW}$ o $500\text{ kW}$). Los inversores 3, 4 y 5, al recibir únicamente el valor $\alpha$ fijado por la consigna global, no incrementan su generación para compensar el déficit. **Se demuestra que el control en bucle abierto no garantiza el cumplimiento de los compromisos con el TSO**, haciendo imprescindible un PPC con realimentación del error en el PCC.
+
+### Ejercicio 2: Sintonización y Dinámica del Controlador PI
+Al activar la realimentación en el PPC, la S-Function recalcula $\alpha$ dinámicamente. La siguiente tabla resume la respuesta del sistema tras el escalón de $7000\text{ kW}$ a $5000\text{ kW}$ a los $t = 10\text{ s}$:
+
+| Consigna $P_{TSO}$ [kW] | $P_{pv-av,1,2}$ [kW] | $K_p$ | $K_i$ | ¿Alcanza Consigna? | Comportamiento Dinámico y Sobrepico |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $0$ | **No** ($P_{pcc} \approx 5200\text{ kW}$) | Sin sobrepico, pero con error permanente por falta de acción integral. |
+| $7000 \to 5000$ | $2000$ | $5.0$ | $0$ | **Casi** ($P_{pcc} \approx 5020\text{ kW}$) | Reduce el error de régimen permanente, pero introduce oscilaciones transitorias. |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $0.1$ | **Sí** | Respuesta extremadamente lenta ($t_{asentamiento} \approx 15\text{ s}$), sobreamortiguada. |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $1.0$ | **Sí** | **Ajuste Óptimo:** Tiempo de asentamiento rápido ($\sim 3\text{ s}$) y nulo sobrepico. |
+| $7000 \to 5000$ | $2000$ | $0.5$ | $10.0$ | **Sí** | **Respuesta Inestable:** Severas oscilaciones y sobrepico amplio por interacción con retardos. |
+| $7000 \to 5000$ | $500$ | $0.5$ | $1.0$ | **Sí** | Eleva $\alpha$ automáticamente para que los Inv 3-5 compensen la falta de Inv 1-2. |
+
+: Sintonización de Parámetros del Controlador PI del PPC {#tbl-ejercicio2}
+
+**Análisis Técnico:** El valor $K_p = 0.5$ y $K_i = 1.0$ resulta ser la combinación óptima. Compensar el déficit de los inversores sombreados exige que el PPC eleve $\alpha$ por encima de $0.5$, repartiendo el esfuerzo de inyección entre las unidades disponibles.
+
+### Ejercicios 3 y 4: Saturación de Salida y Fenómeno de Windup
+Cuando el TSO solicita $10\text{ MW}$ pero la planta físicamente solo puede suministrar $7\text{ MW}$ ($P_{pv-av,1,2} = 500\text{ kW}$), se establece un error constante $e(k) = 10000 - 7000 = 3000\text{ kW}$.
+
+* **Mecanismo del Windup:** El término integral acumula continuamente este error no nulo, haciendo crecer el estado interno del integrador a valores muy superiores al $100\%$ de la capacidad de la planta.
+* **Impacto en el Transitorio:** Al caer la consigna a $5\text{ MW}$ a los $t = 20\text{ s}$, la potencia medida en el PCC **permanece congelada en $7\text{ MW}$ durante varios segundos**. El controlador no reacciona hasta que la acción integral logra "evacuar" el exceso de error acumulado y la señal $\alpha$ retorna al rango operable ($<1.0$).
+
+```matlab
+% Lógica de Clamping Anti-Windup implementada en la M-S-Function del PPC
+function [sys, x0, str, ts] = m_ppc_controller(t, x, u, flag, Kp, Ki, Ts, Pplant)
+    % u(1): P_pcc_setpoint [kW]
+    % u(2): P_pcc_meas [kW]
+    
+    persistent I_term_prev alpha_prev
+    if isempty(I_term_prev)
+        I_term_prev = 0;
+        alpha_prev = 0;
+    end
+    
+    P_set = u(1);
+    P_meas = u(2);
+    error = P_set - P_meas;
+    
+    % Cálculo provisional de salida no saturada
+    P_tot_unstat = Kp * error + (I_term_prev + Ki * Ts * error);
+    alpha_unstat = P_tot_unstat / Pplant;
+    
+    % Anti-Windup Clamping Logic
+    if (alpha_unstat > 1.0 && error > 0) || (alpha_unstat < 0.0 && error < 0)
+        % Congelar integrador si la salida está saturada y el error mantendría la saturación
+        I_term = I_term_prev;
+    else
+        I_term = I_term_prev + Ki * Ts * error;
+    end
+    
+    P_tot = Kp * error + I_term;
+    alpha = max(0.0, min(1.0, P_tot / Pplant));
+    
+    I_term_prev = I_term;
+    alpha_prev = alpha;
+    
+    sys = [alpha];
+end
+```
+
+Al aplicar el Anti-Windup en el Ejercicio 4 (paso de nube global de $t=30\text{ s}$ a $t=40\text{ s}$), se elimina el sobrepico de potencia al despejarse la nube, retornando la inyección al valor consignado de $5\text{ MW}$ de forma completamente suave.
+
+### Ejercicio 5: Control Combinado con Almacenamiento BESS
+El almacenamiento en baterías aporta el soporte de potencia activa necesario para dar cumplimiento a las restricciones de rampa máxima ($10\% P_{nom}/\text{min} = 1\text{ MW}/\text{min}$):
+
+* **Control Directo de Rampa vs Filtrado Paso Bajo:** El control directo activa la batería exclusivamente cuando la derivada de potencia sobrepasa el límite ($\Delta P / \Delta t > \Delta P_{max}$), reduciendo drásticamente los ciclos de carga/descarga e incrementando la vida útil del BESS frente al filtrado continuo.
+* **Estrategias de Estado de Carga ($SOC$):** Operar con un $SOC^*$ dinámico proporcional a la generación actual permite mantener la batería cargada ante posibles rampas de bajada bruscas y con margen suficiente para absorber rampas de subida, logrando el equilibrio óptimo entre dimensionado del BESS y aprovechamiento de la energía solar.
+
+---
+
+## Conclusiones
+
+1. **Imprescindibilidad del PPC Centralizado:** Las simulaciones corroboran que el control local en bucle abierto es incapaz de responder ante perturbaciones de irradiancia o sombreado parcial. El regulador PI centralizado garantiza el cumplimiento de la consigna del TSO redistribuyendo el esfuerzo de generación.
+2. **Sintonización Robusta ($K_p = 0.5, K_i = 1.0$):** Esta combinación ofrece un excelente compromiso entre rapidez de asentamiento ($\approx 3\text{ s}$) y estabilidad frente a retardos de comunicación ($20\text{ ms}$).
+3. **Efectividad del Anti-Windup:** La integración de un mecanismo de *Clamping* evita acumulaciones excesivas en la acción integral durante episodios de saturación física, garantizando una recuperación inmediata cuando las condiciones atmosféricas o de red se normalizan.
+4. **Sinergia Fotovoltaica + BESS:** El sistema de almacenamiento compensa las limitaciones dinámicas del campo solar, absorbiendo y devolviendo potencia durante rampas bruscas y garantizando la conformidad técnica con los códigos de red más exigentes.

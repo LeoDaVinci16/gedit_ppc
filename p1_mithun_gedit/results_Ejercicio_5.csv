@@ -1,0 +1,7 @@
+caso,control,max_dP_60s_kW,ramp_limit_met,P_final_kW,E_pv_kWh,E_bat_out_kWh,E_bat_in_kWh,SOC_min,SOC_max,SOC_end,Pbat_min_kW,Pbat_max_kW
+5.1,"PI only (no ramp control)",5000,0,5000,918,0,0,0.5,0.5,0.5,0,0
+5.2,"ramp, PV only",1000,1,5000,1126,0,0,0.5,0.5,0.5,0,0
+5.3,"ramp + battery 3 MW / 1 MWh",1000,1,5000,1500,0,375,0.5,0.856,0.856,-3000,0
+5.4,"ramp, PV only",7500,0,9990,1666,0,0,0.5,0.5,0.5,0,0
+5.5,"ramp + battery 8 MW / 1 MWh",1000,1,10000,1875,412,208,0.366,0.8,0.564,-4953,7402
+5.6,"ramp + battery 3 MW / 1 MWh",4500,0,10000,1842,248,175,0.539,0.8,0.705,-2983,3000
